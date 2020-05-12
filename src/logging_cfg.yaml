@@ -1,0 +1,27 @@
+version: 1
+disable_existing_loggers: False
+formatters:
+    simple:
+        format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+handlers:
+    file_handler:
+        class: logging.handlers.RotatingFileHandler
+        level: WARNING
+        formatter: simple
+        filename: './log.txt'
+        mode: a
+        maxBytes: 1048576 # 1MB
+        backupCount: 0
+        encoding: utf8
+
+    console:
+        class: logging.StreamHandler
+        level: DEBUG
+        formatter: simple
+        stream: ext://sys.stdout
+
+root:
+    filemode: w
+    level: DEBUG
+    handlers: [console]
