@@ -8,8 +8,9 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn import linear_model
-from configuration import CONFIG
-from .meta_nn import MetaNN
+import importlib
+
+from configuration import CONFIG, meta_models
 
 
 def regression_fit_and_predict(x_train, y_train, x_test):
@@ -21,7 +22,7 @@ def regression_fit_and_predict(x_train, y_train, x_test):
 
 
 def classification_l1_fit_and_predict(x_train, y_train, lambdas, x_test):
-    if CONFIG.META_MODEL == "linear":
+    if CONFIG.META_MODEL_TYPE == "linear":
         model = linear_model.LogisticRegression(C=lambdas, penalty='l1', solver='saga', max_iter=1000, tol=1e-3)
     model.fit(x_train, y_train)
     y_test_pred = model.predict_proba(x_test)
@@ -30,10 +31,10 @@ def classification_l1_fit_and_predict(x_train, y_train, lambdas, x_test):
 
 
 def classification_fit_and_predict(x_train, y_train, x_test):
-    if CONFIG.META_MODEL == "linear":
+    if CONFIG.META_MODEL_TYPE == "linear":
         model = linear_model.LogisticRegression(solver='saga', max_iter=1000, tol=1e-3)
     else:
-        raise ValueError('meta segmentation model \'{}\' not supported.'.format(CONFIG.META_MODEL))
+        raise ValueError('meta segmentation model \'{}\' not supported by this function.'.format(CONFIG.META_MODEL_TYPE))
     model.fit(x_train, y_train)
     y_test_pred = model.predict_proba(x_test)
     y_train_pred = model.predict_proba(x_train)
@@ -42,7 +43,11 @@ def classification_fit_and_predict(x_train, y_train, x_test):
 
 
 def meta_nn_predict(pretrained_model_path, x_test, gpu=0, batch_size=64):
-    net = MetaNN(x_test.shape[1]).cuda(gpu)
+    net = getattr(importlib.import_module(meta_models[CONFIG.META_MODEL_NAME].module_name),
+                  meta_models[CONFIG.META_MODEL_NAME].class_name)(
+        x_test.shape[1],
+        **meta_models[CONFIG.META_MODEL_NAME].kwargs
+    ).cuda(gpu)
     net.load_state_dict(torch.load(pretrained_model_path))
     net.eval()
 

@@ -15,7 +15,7 @@ class CustomDataset(data.Dataset):
                  root='/path/to/your/image/directory',
                  image_file_extension='.png',
                  transform=None,
-                 label_mapping=discover_mapping):
+                 label_mapping=None):
         self.log = logging.getLogger('CustomDataset')
         self.root = root
         self.transform = transform

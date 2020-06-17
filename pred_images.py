@@ -12,8 +12,7 @@ import os
 import importlib
 
 from src.imageaugmentations import Compose, Normalize, ToTensor
-from src.model.deepv3 import DeepWV3Plus
-from configuration import CONFIG, datasets
+from configuration import CONFIG, datasets, models
 from src.log_utils import log_config
 
 ex = Experiment('pred_images')
@@ -50,18 +49,66 @@ def save(out, lbl, image_path, ind, input_dir):
 
 
 @ex.capture
-def load_net_and_data(args):
+def load_net_weights(net: nn.Module, filepath: str, _log) -> None:
+    try:
+        model_checkpoint = torch.load(filepath)['state_dict']
+    except KeyError:
+        model_checkpoint = torch.load(filepath)
+    except FileNotFoundError as e:
+        raise FileNotFoundError("The specified model weight file '{}' could not be found!".format(
+            filepath
+        )) from e
+    except Exception as e:
+        raise e
+
+    key_errors = net.load_state_dict(model_checkpoint, strict=False)
+    if len(key_errors.missing_keys) == 0:
+        if len(key_errors.unexpected_keys) != 0:
+            _log.warning("The following unexpected parameters were not loaded into the model: {}".format(
+                key_errors.unexpected_keys)
+            )
+    else:
+        raise RuntimeError("Missing keys in state dict:\n{}".format(
+            key_errors.missing_keys
+        ))
+
+
+@ex.capture
+def load_net_and_data(args, _log):
     """This functions loads the image data as well as the semantic segmentation network"""
 
     # DataParallel is needed due to weight loading!
-    traindat_module = importlib.import_module(CONFIG.TRAIN_DATASET.module_name)
-    net = nn.DataParallel(DeepWV3Plus(getattr(traindat_module, 'num_classes')), device_ids=[args['gpu']])
-    net.load_state_dict(torch.load(args['pretrained_model'])['state_dict'], strict=False)
+    net = nn.DataParallel(getattr(importlib.import_module(models[args['model_name']].module_name),
+                                  models[args['model_name']].class_name)(**models[args['model_name']].kwargs),
+                          device_ids=[args['gpu']])
+    try:
+        # try to load the weights into the DataParallel Module
+        load_net_weights(net, models[args['model_name']].model_weights)
+    except RuntimeError:
+        # If model weights were not saved while being in the DataParallel Module we can try to load the weights
+        # directly into the network
+        _log.debug("Model weights could not be loaded into the DataParallel Module. "
+                   "Trying to load them into the network directly.")
+        net = getattr(importlib.import_module(models[args['model_name']].module_name),
+                      models[args['model_name']].class_name)(**models[args['model_name']].kwargs)
+        load_net_weights(net, models[args['model_name']].model_weights)
+    except Exception as e:
+        raise e
+
+    _log.info("Loading of model weights successful")
     net.eval()
     net = net.cuda(args['gpu'])
 
-    mean = getattr(traindat_module, 'mean')
-    std = getattr(traindat_module, 'std')
+    traindat_module = importlib.import_module(CONFIG.TRAIN_DATASET.module_name)
+    try:
+        mean = getattr(traindat_module, 'mean')
+    except AttributeError as err:
+        raise AttributeError("Could not find a data mean for normalization in your dataset module.") from err
+
+    try:
+        std = getattr(traindat_module, 'std')
+    except AttributeError as err:
+        raise AttributeError("Could not find a data standard deviation for normalization in your dataset module.") from err
 
     trans = Compose([ToTensor(), Normalize(mean, std)])
     dat = getattr(importlib.import_module(datasets[args['dataset']].module_name), datasets[args['dataset']].class_name)(
@@ -98,7 +145,7 @@ def config():
         input_dir=CONFIG.INPUT_DIR,
         model_name=CONFIG.MODEL_NAME,
         classindex=CONFIG.CLASSINDEX,
-        pretrained_model=CONFIG.pretrained_model,
+        pretrained_model=models[CONFIG.MODEL_NAME].model_weights,
         num_cores=CONFIG.NUM_CORES,
         gpu=CONFIG.GPU_ID,
     )

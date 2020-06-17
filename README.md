@@ -55,16 +55,18 @@ to your images in the `configuration.py`.\
 For all other cases you have to do the following:
 
 1. Write a [PyTorch dataset class](https://pytorch.org/docs/1.3.1/data.html?highlight=dataset#torch.utils.data.Dataset)
-for your dataset. The class should have an attribute called `label_mapping` containing a dictionary mapping for ground
-truth ids that returns a tuple `(class_name, class_rgb_color)` with `class_name` being a string depicting the name of
-the class and `class_rgb_color` being a tuple containing the RGB color for this class. RGB values should be in the range
-[0, 255]. The `__getitem__` of your dataset class should return three elements in the following order:
+for your dataset. The `__getitem__` of your dataset class should return three elements in the following order:
 `(image, ground_truth, path_to_image)`. If you do not have ground truth information for your data you can just return
-a tensor of zeros that has the same size as the image. The `__init__` method of your class should also accept the
+a tensor of zeros that has the same spatial size as the image. The `__init__` method of your class should also accept the
 keyword `transform` and apply it to the image data. This ensures that the correct mean and standard deviation
 for normalization is applied to the data. (see `src/datasets` for examples) Additionally if you specify your own
-training dataset the class has to provide the attribute `pred_mapping` which maps training class ids to the same
-tuple format as the `label_mapping`.
+training dataset the class has to provide the attribute `pred_mapping` containing a dictionary mapping for predicted
+class ids that returns a tuple `(class_name, class_rgb_color)` with `class_name` being a string depicting the name of
+the class and `class_rgb_color` being a tuple containing the RGB color for this class. RGB values should be in the range
+[0, 255]. If you also want to including some ground truth information you can provide a `label_mapping` attribute which
+contains a similar mapping as the `pred_mapping` attribute but for all available ground truth classes. There are 
+`pred_mapping` **and** `label_mapping` attributes as the set of predicted classes can differ from the total available
+set of classes.
 
 2. Update the named tuple `datasets` within the `configuration.py` file. You have to supply the name of your dataset,
 the module_name, the class name of your PyTorch dataset class as well as a dictionary containing optional keyword
@@ -92,4 +94,7 @@ m | Cycles through available distance metrics for nearest neighbor search.
 g | Colors the scatter plot with the colors of the ground truth classes.
 h | Colors the scatter plot with the colors of the predicted classes.
 b | Colors the scatter in a uniform blue color.
+d | Shows a global gaussian kernel density estimate in the background.
+c | Starts a clustering with k-means as standard algorithm. You will be asked for the number of clusters you want to compute. Typing 'elbow' will give you the opportunity to estimate the optimal number of clusters. This only works with the k-means algorithm.
+# | Cycles through all available clustering algorithms. Currently there is k-means, spectral- and agglomerative-clustering (with ward linkage) supported.
     

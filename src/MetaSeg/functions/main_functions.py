@@ -15,7 +15,7 @@ from multiprocessing import Pool
 from sklearn.metrics import mean_squared_error, r2_score, roc_curve, auc
 from functools import partial
 
-from configuration import CONFIG
+from configuration import CONFIG, meta_models
 from src.MetaSeg.functions.metrics import compute_metrics_components, entropy
 from src.MetaSeg.functions.helper import concatenate_metrics, metrics_to_dataset, get_lambdas, metrics_to_nparray
 from src.MetaSeg.functions.in_out import get_save_path_input_i, get_save_path_metrics_i, probs_gt_load, metrics_dump, \
@@ -137,12 +137,12 @@ class VisualizeMetaPrediction(object):
                                                                                                   non_empty=False)
         xa = np.concatenate((xa, classes), axis=-1)
 
-        if CONFIG.META_MODEL == 'neural':
-            ya_pred = meta_nn_predict(CONFIG.meta_nn_weights, xa, CONFIG.GPU_ID)
-        elif CONFIG.META_MODEL == 'linear':
+        if CONFIG.META_MODEL_TYPE == 'neural':
+            ya_pred = meta_nn_predict(meta_models[CONFIG.META_MODEL_NAME].model_weights, xa, CONFIG.GPU_ID)
+        elif CONFIG.META_MODEL_TYPE == 'linear':
             ya_pred, _ = regression_fit_and_predict(xa, ya, xa)
         else:
-            raise ValueError('Unknown meta model \'{}\''.format(CONFIG.META_MODEL))
+            raise ValueError('Unknown meta model \'{}\''.format(CONFIG.META_MODEL_TYPE))
         print("Model R2 score: {:.2%}\n".format(r2_score(ya, ya_pred)))
         p_args = [(ya_pred[start[i]:start[i + 1]], j)
                   for i, j in enumerate(self.num_imgs)]

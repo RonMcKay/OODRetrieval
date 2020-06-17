@@ -193,7 +193,7 @@ def config():
         min_crop_width=128,  # Minimum width of the resulting bounding box, can be larger than min_width
         meta_nn_path='./src/meta_nn.pth',  # Path to the meta segmentation model
         iou_threshold=0.5,  # Threshold to use for extracting segments based on predicted IoU
-        meta_model=CONFIG.META_MODEL,  # Model type to use for meta segmentation
+        meta_model=CONFIG.META_MODEL_TYPE,  # Model type to use for meta segmentation
     )
 
     if args['meta_model'] == 'neural':

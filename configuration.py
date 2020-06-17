@@ -7,12 +7,38 @@ import os
 from os.path import join
 from collections import namedtuple
 
+ModelConfig = namedtuple('Model', [
+    'name',  # Name of the model
+    'module_name',  # Name of the module the model class is defined in
+    'class_name',  # Name of the model class within the module
+    'kwargs',  # Dictionary of keyword arguments to supply to the model class during loading
+    'model_weights',  # Path to the pretrained model weights
+])
+
 DatasetConfig = namedtuple('Dataset', [
     'name',  # Name of the dataset
     'module_name',  # Name of the module the dataset class is defined in
     'class_name',  # Name of the dataset class within the module
     'kwargs',  # Dictionary of keyword arguments to supply to the dataset class during loading
 ])
+
+models = dict(
+    deeplabv3plus=ModelConfig('deeplabv3plus',
+                              'src.model.deepv3',
+                              'DeepWV3Plus',
+                              dict(num_classes=19),
+                              '/path/to/the/pretrained/deeplabv3plus/weights.pth')
+)
+
+# The constructor of your meta model needs to accept an integer (as first argument) to specify the number of input features
+# The output of your meta model is expected to be linear and to have a single node
+meta_models = dict(
+    meta_nn=ModelConfig('meta_nn',
+                        'src.MetaSeg.functions.meta_nn',
+                        'MetaNN',
+                        {},
+                        './src/meta_nn.pth')
+)
 
 datasets = dict(
     cityscapes=DatasetConfig('cityscapes',
@@ -53,7 +79,7 @@ class CONFIG:
     # set necessary paths   #
     # --------------------- #
 
-    metaseg_io_path = "/data/poberdie/metaseg"  # directory with inputs and outputs, i.e. saving and loading data
+    metaseg_io_path = "/your/metaseg/input-output/path"  # directory with inputs and outputs, i.e. saving and loading data
 
     # ---------------------------- #
     # paths for data preparation   #
@@ -67,16 +93,14 @@ class CONFIG:
     # select or define   #
     # ------------------ #
 
-    model_names = ["deeplabv3plus"]
-    pretrained_model = "/data/poberdie/nvidia_pretrained_models/cityscapes_best.pth"  # path to pretrained model weights file
-    meta_nn_weights = "./src/meta_nn.pth"
-    meta_models = ["linear", "neural"]
+    meta_model_types = ["linear", "neural"]
 
-    CLASS_DTYPE = 'probs'  # = "probs" ( one of ['one_hot_classes', 'probs']
+    CLASS_DTYPE = 'probs'  # = "probs" ( one of ['one_hot_classes', 'probs'], just leave it like that
     TRAIN_DATASET = datasets['cityscapes']  # The dataset the semantic segmentation model got trained on
     DATASET = datasets['cityscapes_val']  # used for input/output folder path
-    MODEL_NAME = model_names[0]  # used for input/output folder path
-    META_MODEL = meta_models[1]
+    MODEL_NAME = 'deeplabv3plus'  # used for input/output folder path
+    META_MODEL_NAME = 'meta_nn'
+    META_MODEL_TYPE = meta_model_types[1]
 
     # --------------------------------------------------------------------#
     # select tasks to be executed by setting boolean variable True/False #
@@ -92,10 +116,11 @@ class CONFIG:
 
     GPU_ID = 0
     NUM_CORES = 8
-    NUM_IMAGES = 500
-    NUM_AVERAGES = 10
-    NUM_LASSO_LAMBDAS = 40
-    CLASSINDEX = None
+    # NUM_IMAGES = 500  # uncomment to only process the first 'NUM_IMAGES' images of the specified dataset
+    NUM_AVERAGES = 10  # only used when meta model is 'linear'
+    NUM_LASSO_LAMBDAS = 40  # only used when meta model is 'linear'
+    CLASSINDEX = None  # if DATASET is set to 'a2d2' and CLASSINDEX is set to an valid integer only images
+    # containing the specified class will be processed.
 
     INPUT_DIR = join(metaseg_io_path, "input", MODEL_NAME, DATASET.name) + "/"
     METRICS_DIR = join(metaseg_io_path, "metrics", MODEL_NAME, DATASET.name) + "/"

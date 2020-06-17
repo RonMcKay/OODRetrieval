@@ -5,10 +5,11 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import os
-from os.path import join, dirname
+from os.path import join, dirname, abspath
+import importlib
 
-from src.MetaSeg.functions.meta_nn import MetaNN, MetricDataset
-from configuration import CONFIG
+from src.MetaSeg.functions.meta_nn import MetricDataset
+from configuration import CONFIG, meta_models
 from src.MetaSeg.functions.helper import load_data
 from src.log_utils import log_config
 
@@ -32,13 +33,14 @@ def config():
     args = dict(
         dataset='cityscapes',
         dataset_val='cityscapes_val',
+        meta_model_name=CONFIG.META_MODEL_NAME,
         epochs=50,
         learning_rate=1e-4,
         weight_decay=5e-4,
         batch_size=256,
         n_jobs=CONFIG.NUM_CORES,
         gpu=CONFIG.GPU_ID,
-        save_folder=join(CONFIG.metaseg_io_path, 'meta_networks'),
+        save_folder=abspath(join('.', 'src')),
         net_name='meta_nn.pth',
     )
 
@@ -72,7 +74,11 @@ def train(args, _run, _log):
                            num_workers=args['n_jobs'])
 
     _log.info('Initializing network...')
-    net = MetaNN(xa.shape[1]).cuda(args['gpu'])
+    net = getattr(importlib.import_module(meta_models[args['meta_model_name']].module_name),
+                  meta_models[args['meta_model_name']].class_name)(
+        xa.shape[1],
+        **meta_models[args['meta_model_name']].kwargs
+    ).cuda(args['gpu'])
 
     optimizer = torch.optim.Adam(net.parameters(),
                                  lr=args['learning_rate'],

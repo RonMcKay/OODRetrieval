@@ -1,7 +1,9 @@
 import pyximport
+
 pyximport.install()
 
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 from matplotlib.patches import Patch
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from matplotlib import cm
@@ -12,7 +14,7 @@ import numpy as np
 from numpy.linalg import norm
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE, Isomap
-from sklearn.cluster import KMeans, AgglomerativeClustering
+from sklearn.cluster import KMeans, AgglomerativeClustering, SpectralClustering
 import math
 import os
 from os.path import join, expanduser
@@ -21,6 +23,7 @@ import logging
 import importlib
 
 from src.MetaSeg.functions.in_out import probs_gt_load, components_load
+from src.MetaSeg.functions.utils import estimate_kernel_density
 from configuration import CONFIG, datasets
 from src.MetaSeg.functions.metrics import entropy
 
@@ -68,7 +71,7 @@ class Discovery(object):
 
         self.cluster_methods = OrderedDict()
         self.cluster_methods['kmeans'] = {'main': KMeans, 'kwargs': {}}
-        # self.cluster_methods['spectral'] = {'main': SpectralClustering, 'kwargs': {}}
+        self.cluster_methods['spectral'] = {'main': SpectralClustering, 'kwargs': {}}
         self.cluster_methods['agglo'] = {'main': AgglomerativeClustering, 'kwargs': {'linkage': 'ward'}}
 
         self.methods_with_ncluster_param = ['kmeans', 'spectral', 'agglo']
@@ -106,7 +109,8 @@ class Discovery(object):
                 self.log.info('Computing PCA...')
                 n_comp = 50 if 50 < min(len(self.data['embeddings']),
                                         self.data['embeddings'][0].shape[0]) else min(len(self.data['embeddings']),
-                                                                                      self.data['embeddings'][0].shape[0])
+                                                                                      self.data['embeddings'][0].shape[
+                                                                                          0])
                 embeddings = PCA(
                     n_components=n_comp
                 ).fit_transform(np.stack(self.data['embeddings']).reshape((-1, self.data['embeddings'][0].shape[0])))
@@ -128,7 +132,9 @@ class Discovery(object):
                      'Data has thus not been reduced in dimensionality.').format(
                         embedding_size,
                         self.data['embeddings'].shape[1]))
-            elif (self.data['nn_embeddings'].shape[1] == embedding_size if 'nn_embeddings' in self.data.keys() else False) \
+            elif (
+                    self.data['nn_embeddings'].shape[
+                        1] == embedding_size if 'nn_embeddings' in self.data.keys() else False) \
                     and not overwrite_embeddings:
                 self.embeddings = self.data['nn_embeddings']
                 self.log.info(('Loaded reduced embeddings ({} dimensions) from precomputed file '
@@ -147,7 +153,8 @@ class Discovery(object):
                             **tsne_args
                         ).fit_transform(embeddings)
                 else:
-                    self.log.info('Computing Isomap of dimension {} for nearest neighbor search...'.format(embedding_size))
+                    self.log.info(
+                        'Computing Isomap of dimension {} for nearest neighbor search...'.format(embedding_size))
                     self.embeddings = Isomap(n_components=embedding_size,
                                              n_jobs=n_jobs,
                                              ).fit_transform(embeddings)
@@ -163,11 +170,15 @@ class Discovery(object):
 
         self.label_mapping = dict()
         for d in np.unique(self.data['dataset']).flatten():
-            self.label_mapping[d] = getattr(
-                importlib.import_module(datasets[d].module_name),
-                datasets[d].class_name)(
-                **datasets[d].kwargs,
-            ).label_mapping
+            try:
+                self.label_mapping[d] = getattr(
+                    importlib.import_module(datasets[d].module_name),
+                    datasets[d].class_name)(
+                    **datasets[d].kwargs,
+                ).label_mapping
+            except AttributeError:
+                self.label_mapping[d] = None
+
         train_dat = self.label_mapping[CONFIG.TRAIN_DATASET.name] = getattr(
             importlib.import_module(CONFIG.TRAIN_DATASET.module_name),
             CONFIG.TRAIN_DATASET.class_name)(
@@ -179,6 +190,12 @@ class Discovery(object):
 
         self.tnsize = (50, 50)
         self.fig_nn = None
+        self.fig_main = None
+        self.line_main = None
+        self.im = None
+        self.xybox = None
+        self.ab = None
+        self.basecolors = np.stack([self.standard_color for _ in range(self.x.shape[0])])
         self.n_neighbors = 49
         self.current_pressed_key = None
 
@@ -193,16 +210,22 @@ class Discovery(object):
         self.fig_main.canvas.set_window_title('Embedding space')
         ax = self.fig_main.add_subplot(111)
         ax.set_axis_off()
+        # self.line_main = ax.scatter(self.x, self.y,
+        #                             marker="o",
+        #                             color=np.stack([tuple(i / 255.0
+        #                                                   for i in self.label_mapping[
+        #                                                       self.data['dataset'][self.gi[ind]]
+        #                                                   ][self.gt[ind]][1])
+        #                                             + (1.0,) for ind in range(self.x.shape[0])]),
+        #                             zorder=2)
         self.line_main = ax.scatter(self.x, self.y,
                                     marker="o",
-                                    color=np.stack([tuple(i / 255.0
-                                                          for i in self.label_mapping[
-                                                              self.data['dataset'][self.gi[ind]]
-                                                          ][self.gt[ind]][1])
-                                                    + (1.0,) for ind in range(self.x.shape[0])]))
+                                    color=self.basecolors,
+                                    zorder=2)
         self.line_main.set_picker(True)
 
-        if plot_args['legend'] if 'legend' in plot_args else False:
+        if (plot_args['legend'] and all(lm is not None for lm in self.label_mapping.values()))\
+                if 'legend' in plot_args else False:
             box = ax.get_position()
             ax.set_position([box.x0, box.y0, box.width, box.height * 0.8])
             legend_elements = []
@@ -351,6 +374,7 @@ class Discovery(object):
 
     def key_press(self, event):
         """Performs different actions based on pressed keys."""
+        self.log.debug('Key \'{}\' pressed.'.format(event.key))
         if event.key == 'm':
             self.dm += 1
             self.dm = self.dm % len(self.distance_metrics)
@@ -362,23 +386,25 @@ class Discovery(object):
         elif event.key == 'c':
             self.log.info('Started clustering with {}...'.format(list(self.cluster_methods.keys())[self.cme]))
             self.cluster(method=list(self.cluster_methods.keys())[self.cme])
-            self.fig_main.axes[0].get_legend().remove()
-            self.basecolors = cm.get_cmap('viridis', (max(self.clustering) + 1))(self.clustering)
+            if self.fig_main.axes[0].get_legend() is not None:
+                self.fig_main.axes[0].get_legend().remove()
+            self.basecolors = cm.get_cmap('viridis', (max(self.clustering) + 1))(
+                self.clustering
+            )
             self.flush_colors()
-            self.cluster_statistics()
-        elif event.key == 'x':
-            if self.clustering is not None:
-                self.cluster_statistics()
         elif event.key == 'g':
             self.color_gt()
         elif event.key == 'h':
             self.color_pred()
         elif event.key == 'b':
             self.set_color(list(range(self.basecolors.shape[0])), self.standard_color)
+            if self.fig_main.axes[0].get_legend() is not None:
+                self.fig_main.axes[0].get_legend().remove()
             self.flush_colors()
+        elif event.key == 'd':
+            self.show_density()
 
         self.current_pressed_key = event.key
-        self.log.debug('Key \'{}\' pressed.'.format(event.key))
 
     def key_release(self, event):
         """Clears the variable where the last pressed key is saved."""
@@ -443,11 +469,16 @@ class Discovery(object):
         predc = np.asarray([self.pred_mapping[pred[ind_i, ind_j]][1]
                             for ind_i in range(pred.shape[0])
                             for ind_j in range(pred.shape[1])]).reshape(image.shape)
-        gtc = np.asarray([self.label_mapping[dataset][gt[ind_i, ind_j]][1]
-                          for ind_i in range(gt.shape[0])
-                          for ind_j in range(gt.shape[1])]).reshape(image.shape)
-
         overlay_factor = [1.0, 0.5, 1.0]
+
+        if self.label_mapping[dataset] is not None:
+            gtc = np.asarray([self.label_mapping[dataset][gt[ind_i, ind_j]][1]
+                              for ind_i in range(gt.shape[0])
+                              for ind_j in range(gt.shape[1])]).reshape(image.shape)
+        else:
+            gtc = np.zeros_like(image)
+            overlay_factor[1] = 0.0
+
         img_predc, img_gtc, img_entropy = [
             Image.fromarray(np.uint8(arr * overlay_factor[i] + image * (1 - overlay_factor[i])))
             for i, arr in enumerate([predc,
@@ -499,7 +530,10 @@ class Discovery(object):
         image = Image.open(self.data['image_path'][self.gi[ind]]).convert('RGB')
         image = image.crop(self.data['box'][ind])
 
-        name = self.label_mapping[self.data['dataset'][self.gi[ind]]][self.gt[ind]][0]
+        if self.label_mapping[self.data['dataset'][self.gi[ind]]] is None:
+            name = 'None'
+        else:
+            name = self.label_mapping[self.data['dataset'][self.gi[ind]]][self.gt[ind]][0]
         if name[-1].isdigit():
             name = name[:-2]
 
@@ -558,56 +592,6 @@ class Discovery(object):
             self.clustering = self.cluster_methods[method]['main'](
                 n_clusters=n_clusters,
                 **self.cluster_methods[method]['kwargs']).fit_predict(self.embeddings)
-
-    def cluster_statistics(self):
-        fig_clstats = plt.figure(max(3, max(plt.get_fignums()) + 1))
-        clusters = np.unique(self.clustering).flatten()
-        n = math.ceil(math.sqrt(clusters.shape[0]))
-        all_label_names = []
-        self.log.debug('Size of cluster statistics plots: {}'.format(n))
-        for i in range(n ** 2):
-            ax = fig_clstats.add_subplot(n, n, i + 1)
-            if i < clusters.shape[0]:
-                # labels, label_counts = np.unique(self.gt[self.clustering == clusters[i]], return_counts=True)
-
-                label_names = []
-                cols = []
-                for j in range(self.clustering.shape[0]):
-                    if self.clustering[j] == clusters[i]:
-                        dat = self.data['dataset'][self.gi[j]]
-                        name = self.label_mapping[dat][self.gt[j]][0]
-                        label_names.append((name, self.label_mapping[dat][self.gt[j]][1]))
-
-                if i == (clusters.shape[0] - 1):
-                    missing = [all_label_names[ind] for ind in np.unique([lbl[0] for lbl in all_label_names],
-                                                                         return_index=True)[1]]
-                    label_names += missing
-
-                labels, label_inds, label_counts = np.unique([lbl[0] for lbl in label_names],
-                                                             return_counts=True,
-                                                             return_index=True)
-                explode = np.zeros(labels.shape[0])
-                explode[np.argmax(label_counts)] = 0.2
-                cols = np.array([label_names[ind][1] for ind in label_inds])
-                perm = np.argsort(label_counts)[::-1]
-                all_label_names += [label_names[i] for i in np.unique([lbl[0] for lbl in label_names],
-                                                                      return_index=True)[1]]
-
-                ax.pie(label_counts[perm],
-                       # labels=labels[perm],
-                       colors=cols[perm],
-                       explode=explode[perm],
-                       autopct=lambda perc: '{:1.1f}%'.format(perc) if perc > 20 else '',
-                       # shadow=True,
-                       startangle=90,
-                       wedgeprops=dict(edgecolor='w'),
-                       textprops=dict(color="g"))
-                ax.axis('equal')
-            else:
-                ax.set_axis_off()
-
-        fig_clstats.legend(fig_clstats.axes[clusters.shape[0] - 1].patches, labels[perm], loc='upper left')
-        fig_clstats.show()
 
     def elbow(self):
         low = int(input('Enter the minimum number of clusters: '))
@@ -723,27 +707,29 @@ class Discovery(object):
 
     def color_gt(self):
         """When called colors the scatter in the main plot according to the ground truth colors."""
-        self.basecolors = np.stack([tuple(i / 255.0
-                                          for i in self.label_mapping[self.data['dataset'][self.gi[ind]]][
-                                              self.gt[ind]
-                                          ][1])
-                                    + (1.0,) for ind in range(self.basecolors.shape[0])])
-        legend_elements = []
-        for d in np.unique(self.data['dataset']).flatten():
-            cls = np.unique(self.gt[np.array(self.data['dataset'])[self.gi] == d])
-            cls = list({(self.label_mapping[d][cl][0], self.label_mapping[d][cl][1]) for cl in cls})
-            names = np.array([i[0] for i in cls])
-            cols = np.array([i[1] for i in cls])
-            legend_elements += [Patch(color=tuple(i / 255.0 for i in cols[i]) + (1.0,),
-                                      label=names[i]
-                                      if not names[i][-1].isdigit()
-                                      else names[i][:names[i].rfind(' ')])
-                                for i in range(names.shape[0])]
-        self.fig_main.axes[0].legend(loc='upper left', handles=legend_elements, ncol=8, bbox_to_anchor=(0, 1.2))
-        self.flush_colors()
+        if all(self.label_mapping[self.data['dataset'][self.gi[ind]]] is not None
+               for ind in range(self.basecolors.shape[0])):
+            self.basecolors = np.stack([tuple(i / 255.0
+                                              for i in self.label_mapping[self.data['dataset'][self.gi[ind]]][
+                                                  self.gt[ind]
+                                              ][1])
+                                        + (1.0,) for ind in range(self.basecolors.shape[0])])
+            legend_elements = []
+            for d in np.unique(self.data['dataset']).flatten():
+                cls = np.unique(self.gt[np.array(self.data['dataset'])[self.gi] == d])
+                cls = list({(self.label_mapping[d][cl][0], self.label_mapping[d][cl][1]) for cl in cls})
+                names = np.array([i[0] for i in cls])
+                cols = np.array([i[1] for i in cls])
+                legend_elements += [Patch(color=tuple(i / 255.0 for i in cols[i]) + (1.0,),
+                                          label=names[i]
+                                          if not names[i][-1].isdigit()
+                                          else names[i][:names[i].rfind(' ')])
+                                    for i in range(names.shape[0])]
+            self.fig_main.axes[0].legend(loc='upper left', handles=legend_elements, ncol=8, bbox_to_anchor=(0, 1.1))
+            self.flush_colors()
 
     def color_pred(self):
-        """When called colors the scatter in the main plot according the predicted class color."""
+        """When called colors the scatter in the main plot according to the predicted class color."""
         self.basecolors = np.stack([tuple(i / 255.0
                                           for i in self.pred_mapping[self.pred[ind]][1])
                                     + (1.0,)
@@ -752,7 +738,31 @@ class Discovery(object):
                                              for i in self.pred_mapping[cl][1]) + (1.0,),
                                  label=self.pred_mapping[cl][0])
                            for cl in np.unique(self.pred).flatten()]
-        self.fig_main.axes[0].legend(loc='upper left', handles=legend_elements, ncol=8, bbox_to_anchor=(0, 1.2))
+        self.fig_main.axes[0].legend(loc='upper left', handles=legend_elements, ncol=8, bbox_to_anchor=(0, 1.1))
+        self.flush_colors()
+
+    def show_density(self):
+        embedding_kde = estimate_kernel_density(self.data['plot_embeddings'])
+        xmin = self.x.min()
+        xmin = xmin * 1.3 if xmin < 0 else xmin * 0.8
+        xmax = self.x.max()
+        xmax = xmax * 1.3 if xmax > 0 else xmax * 0.8
+
+        ymin = self.y.min()
+        ymin = ymin * 1.3 if ymin < 0 else ymin * 0.8
+        ymax = self.y.max()
+        ymax = ymax * 1.3 if ymax > 0 else ymax * 0.8
+
+        grid_x, grid_y = np.mgrid[xmin:xmax, ymin:ymax]
+        grid_z = embedding_kde(np.vstack([grid_x.flatten(), grid_y.flatten()]))
+        colmap = plt.get_cmap('Greys')
+        colmap = colors.LinearSegmentedColormap.from_list(
+            'trunc({n},{a:.2f},{b:.2f})'.format(n=colmap.name, a=0.0, b=0.75),
+            colmap(np.linspace(0.0, 0.75, 256)))
+        grid_z[grid_z < np.quantile(grid_z, 0.55)] = np.NaN
+        colmap.set_bad('white')
+        self.fig_main.axes[0].pcolormesh(grid_x, grid_y, grid_z.reshape(grid_x.shape),
+                                         cmap=colmap, shading='gouraud', zorder=1)
         self.flush_colors()
 
     def set_color(self, ind, color):
