@@ -69,12 +69,22 @@ contains a similar mapping as the `pred_mapping` attribute but for all available
 set of classes.
 
 2. Update the named tuple `datasets` within the `configuration.py` file. You have to supply the name of your dataset,
-the module_name, the class name of your PyTorch dataset class as well as a dictionary containing optional keyword
+the module name, the class name of your PyTorch dataset class as well as a dictionary containing optional keyword
 arguments that are getting passed to the `__init__` method of your dataset (the root path to the images e.g.).
 That's all you have to do. Just change the `DATASET` attribute within the `CONFIG` and run the scripts. As mentioned
 earlier, if you just want to infer some images without having annotations for them you can use the already written
 `custom_dataset` in `datasets` in the `configuration.py` file. Just change the root path to the directory containing
 your images and run the scripts.
+
+#### How to add your own model
+
+In order to add a custom semantic segmentation or meta model you just have to add a new entry in the respective dictionary
+within the `configuration.py` file. The first argument should be the name of your model (will be used to generate folder structure).
+The second argument should be the module name, the third the class name of your model, the fourth a dictionary of keyword
+arguments that is being passed to the `__init__` method of your model and the fifth argument the path to the pretrained weights,
+or if they do not exist yet where the trained weights should be saved (in case you specified a meta model and train
+it with the `train_meta_nn.py` script). Meta models should accept an integer as first attribute which sets the number
+of input features to the network.
 
 #### Keyboard and mouse commands
 
