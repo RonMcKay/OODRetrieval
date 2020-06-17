@@ -96,5 +96,5 @@ h | Colors the scatter plot with the colors of the predicted classes.
 b | Colors the scatter in a uniform blue color.
 d | Shows a global gaussian kernel density estimate in the background.
 c | Starts a clustering with k-means as standard algorithm. You will be asked for the number of clusters you want to compute. Typing 'elbow' will give you the opportunity to estimate the optimal number of clusters. This only works with the k-means algorithm.
-# | Cycles through all available clustering algorithms. Currently there is k-means, spectral- and agglomerative-clustering (with ward linkage) supported.
+\# | Cycles through all available clustering algorithms. Currently there is k-means, spectral- and agglomerative-clustering (with ward linkage) supported.
     
