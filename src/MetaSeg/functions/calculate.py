@@ -48,7 +48,7 @@ def meta_nn_predict(pretrained_model_path, x_test, gpu=0, batch_size=64):
         x_test.shape[1],
         **meta_models[CONFIG.META_MODEL_NAME].kwargs
     ).cuda(gpu)
-    net.load_state_dict(torch.load(pretrained_model_path))
+    net.load_state_dict(torch.load(pretrained_model_path)['state_dict'])
     net.eval()
 
     with torch.no_grad():

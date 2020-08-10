@@ -237,9 +237,20 @@ def main(args, _run, _log):
 
         # the first dataset of the 'datasets' configuration serves as source domain dataset. Metric statistics of this
         # dataset are used to normalize the target domain metric statistics. This is why it has to get loaded too.
-        _log.info('{}...'.format(args['datasets'][0]))
-        xa, ya, x_names, class_names, xa_mean, xa_std, classes_mean, classes_std, *_, start, pred = load_data(
-            args['datasets'][0])
+        if args['meta_model'] == 'neural' and all(i in torch.load(args['meta_nn_path']).keys() for i in ['train_xa_mean',
+                                                                                                         'train_xa_std',
+                                                                                                         'train_classes_mean',
+                                                                                                         'train_classes_std']):
+            _log.info('Loading values for normalization from saved model file \'{}\''.format(args['meta_nn_path']))
+            model_dict = torch.load(args['meta_nn_path'])
+            xa_mean = model_dict['train_xa_mean']
+            xa_std = model_dict['train_xa_std']
+            classes_mean = model_dict['train_classes_mean']
+            classes_std = model_dict['train_classes_std']
+        else:
+            _log.info('{}...'.format(args['datasets'][0]))
+            xa, ya, x_names, class_names, xa_mean, xa_std, classes_mean, classes_std, *_, start, pred = load_data(
+                args['datasets'][0])
 
         # Now load all other metric statistics and normalize them using the source domain mean and standard deviation
         for i, d in enumerate(args['datasets'][1:], start=1):

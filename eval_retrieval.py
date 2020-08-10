@@ -7,7 +7,6 @@ from sklearn.manifold import TSNE, Isomap
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 from sacred import Experiment
-from sacred.observers import MongoObserver
 import logging
 import sys
 

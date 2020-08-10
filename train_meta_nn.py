@@ -120,6 +120,12 @@ def train(args, _run, _log):
         if avg_val_loss < min_loss:
             min_loss = avg_val_loss
             _log.info('Average validation loss decreased, saved model.')
-            torch.save(net.state_dict(), join(args['save_folder'], args['net_name']))
+            torch.save(
+                {'state_dict': net.state_dict(),
+                 'train_xa_mean': xa_mean,
+                 'train_xa_std': xa_std,
+                 'train_classes_mean': classes_mean,
+                 'train_classes_std': classes_std},
+                join(args['save_folder'], args['net_name']))
 
         scheduler.step()

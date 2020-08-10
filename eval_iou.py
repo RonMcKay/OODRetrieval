@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import tqdm
 from multiprocessing import Pool
 
-from eval.semseg import iou_numpy as iou
+from src.eval_utils import iou_numpy as iou
 from configuration import CONFIG
 from src.MetaSeg.functions.in_out import components_load, get_indices, probs_gt_load
 from src.MetaSeg.functions.helper import load_data
