@@ -45,7 +45,9 @@ cityscapes training set.
 features using common deep learning architectures pretrained on imagenet.
 5. Now you can run the `discover_embedding_space.py` script which launches an interactive matplotlib
 environment where you can discover the resulting embedding space. Look at the end of the readme for keyboard and mouse
-commands that you can use.
+commands that you can use.\
+Note: As images are loaded on the fly it is best to have all the data on a local machine and also run `discover_embedding_space.py`
+on your local machine. SSH tunnels should work too but might be slow because of the transmission of the image data.
 
 #### How to add your own dataset
 
@@ -75,6 +77,10 @@ That's all you have to do. Just change the `DATASET` attribute within the `CONFI
 earlier, if you just want to infer some images without having annotations for them you can use the already written
 `custom_dataset` in `datasets` in the `configuration.py` file. Just change the root path to the directory containing
 your images and run the scripts.
+
+3. If you want to filter out specific predicted classes in the `compute_embeddings.py` script, you can define a list
+`pred_class_selection` within the same file of your dataset class and list all the predicted class indices that should
+be considered for further processing (see `cityscapes.py` for an example).
 
 #### How to add your own model
 

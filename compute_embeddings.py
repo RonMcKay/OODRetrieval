@@ -296,29 +296,6 @@ def main(args, _run, _log):
         else:
             raise ValueError('Meta model {} not supported.'.format(args['meta_model']))
 
-        # This list will be used as an additional filter. Only segments with class predictions in this list will be
-        # picked for further processing.
-        pred_class_selection = [
-            # 0,  # road
-            # 1,  # sidewalk
-            # 2,  # building
-            3,  # wall
-            4,  # fence
-            6,  # traffic light
-            7,  # traffic sign
-            # 8,  # vegetation
-            # 9,  # terrain
-            # 10,  # sky
-            11,  # person
-            12,  # rider
-            13,  # car
-            14,  # truck
-            15,  # bus
-            16,  # train
-            17,  # motorcycle
-            18,  # bicycle
-        ]
-
         # Now the different filters are getting applied to the segments
         _log.info('Filtering segments...')
         inds = np.zeros(pred_test.shape[0]).astype(np.bool)
@@ -327,7 +304,9 @@ def main(args, _run, _log):
         inds = np.logical_or(inds, (ya_pred_test < args['iou_threshold']))
 
         # Filter for extracting segments with predefined class predictions
-        inds = np.logical_and(inds, np.isin(pred_test, pred_class_selection))
+        if hasattr(importlib.import_module(CONFIG.TRAIN_DATASET.module_name), 'pred_class_selection'):
+            pred_class_selection = getattr(importlib.import_module(CONFIG.TRAIN_DATASET.module_name), 'pred_class_selection')
+            inds = np.logical_and(inds, np.isin(pred_test, pred_class_selection))
 
         _log.info('Filtered components (not checked for minimum size):')
         train_dat = getattr(importlib.import_module(CONFIG.TRAIN_DATASET.module_name), CONFIG.TRAIN_DATASET.class_name)(
