@@ -40,7 +40,6 @@ from . import mynn
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152']
 
-
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
     'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
@@ -137,6 +136,7 @@ class ResNet(nn.Module):
     """
     Resnet Global Module for Initialization
     """
+
     def __init__(self, block, layers, num_classes=1000):
         self.inplanes = 64
         super(ResNet, self).__init__()

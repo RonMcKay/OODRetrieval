@@ -30,7 +30,8 @@ models = dict(
                               '/path/to/the/pretrained/deeplabv3plus/weights.pth')
 )
 
-# The constructor of your meta model needs to accept an integer (as first argument) to specify the number of input features
+# The constructor of your meta model needs to accept an integer (as first argument) to specify the number of
+# input features.
 # The output of your meta model is expected to be linear and to have a single node
 meta_models = dict(
     meta_nn=ModelConfig('meta_nn',
@@ -79,7 +80,8 @@ class CONFIG:
     # set necessary paths   #
     # --------------------- #
 
-    metaseg_io_path = "/your/metaseg/input-output/path"  # directory with inputs and outputs, i.e. saving and loading data
+    # directory with inputs and outputs, i.e. saving and loading data
+    metaseg_io_path = "/your/metaseg/input-output/path"
 
     # ---------------------------- #
     # paths for data preparation   #

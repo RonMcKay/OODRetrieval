@@ -216,19 +216,18 @@ class DeepWV3Plus(nn.Module):
     """
 
     def __init__(self, num_classes, trunk='WideResnet38', criterion=nn.NLLLoss()):
-
         super(DeepWV3Plus, self).__init__()
         self.criterion = criterion
         logging.debug("Trunk: %s", trunk)
         wide_resnet = wider_resnet38_a2(classes=1000, dilation=True)
         wide_resnet = torch.nn.DataParallel(wide_resnet)
-#         try:
-#             checkpoint = torch.load('./pretrained_models/wider_resnet38.pth.tar', map_location='cpu')
-#             wide_resnet.load_state_dict(checkpoint['state_dict'])
-#             del checkpoint
-#         except:
-#             print("=====================Could not load ImageNet weights=======================")
-#             print("Please download the ImageNet weights of WideResNet38 in our repo to ./pretrained_models.")
+        #         try:
+        #             checkpoint = torch.load('./pretrained_models/wider_resnet38.pth.tar', map_location='cpu')
+        #             wide_resnet.load_state_dict(checkpoint['state_dict'])
+        #             del checkpoint
+        #         except:
+        #             print("=====================Could not load ImageNet weights=======================")
+        #             print("Please download the ImageNet weights of WideResNet38 in our repo to ./pretrained_models.")
 
         wide_resnet = wide_resnet.module
 
@@ -261,7 +260,6 @@ class DeepWV3Plus(nn.Module):
         initialize_weights(self.final)
 
     def forward(self, inp):
-
         x_size = inp.size()
         x = self.mod1(inp)
         m2 = self.mod2(self.pool2(x))
@@ -291,6 +289,7 @@ def DeepSRNX50V3PlusD_m1(num_classes, criterion):
     return DeepV3Plus(num_classes, trunk='seresnext-50', criterion=criterion, variant='D',
                       skip='m1')
 
+
 def DeepR50V3PlusD_m1(num_classes, criterion):
     """
     Resnet 50 Based Network
@@ -304,4 +303,3 @@ def DeepSRNX101V3PlusD_m1(num_classes, criterion):
     """
     return DeepV3Plus(num_classes, trunk='seresnext-101', criterion=criterion, variant='D',
                       skip='m1')
-

@@ -16,7 +16,7 @@ Detection via Aggregated Dispersion Measures of Softmax Probabilites](https://gi
 #### Preliminaries
 
 - Make sure your cloned copy is on your `PYTHONPATH`.
-- Packages that we used can be found in `requirements.txt`
+- Packages that we used can be found in `requirements.txt`. Demo was tested in a Python 3.7 environment.
 - Change all global path definitions within `configuration.py` to suit your environment.
 - Select the dataset that you want to evaluate on with the `DATASET` attribute within `configuration.py`.
 - All scripts have been written utilizing [sacred](https://sacred.readthedocs.io/en/latest/index.html)

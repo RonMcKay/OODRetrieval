@@ -18,14 +18,14 @@ matplotlib.use('Agg')
 from matplotlib import cm
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
-from scipy.stats import pearsonr, kde
+from scipy.stats import pearsonr
 from scipy.stats import gaussian_kde
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import importlib
 
 from configuration import CONFIG
-from src.MetaSeg.functions.in_out import get_save_path_input_i, probs_gt_load, get_img_path_fname, components_load
+from src.MetaSeg.functions.in_out import get_save_path_input_i, probs_gt_load, components_load
 from src.MetaSeg.functions import labels
 from src.MetaSeg.functions.utils import estimate_kernel_density, get_grid
 from src.MetaSeg.functions.metrics import entropy

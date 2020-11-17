@@ -32,7 +32,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
-import logging
 from collections import OrderedDict
 import math
 import torch.nn as nn
@@ -71,6 +70,7 @@ class SEModule(nn.Module):
     """
     Sequeeze Excitation Module
     """
+
     def __init__(self, channels, reduction):
         super(SEModule, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
@@ -95,6 +95,7 @@ class Bottleneck(nn.Module):
     """
     Base class for bottlenecks that implements `forward()` method.
     """
+
     def forward(self, x):
         residual = x
 
@@ -377,7 +378,6 @@ def initialize_pretrained_model(model, num_classes, settings):
     model.input_range = settings['input_range']
     model.mean = settings['mean']
     model.std = settings['std']
-
 
 
 def se_resnext50_32x4d(num_classes=1000):

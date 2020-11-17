@@ -1,8 +1,7 @@
-import torch
 import torch.utils.data as data
 import numpy as np
 import os
-from os.path import isfile, splitext, abspath, join
+from os.path import isfile, splitext, join
 import logging
 from PIL import Image
 

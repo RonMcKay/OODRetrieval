@@ -40,12 +40,14 @@ import torch.nn as nn
 import torch
 from . import mynn
 
+
 def bnrelu(channels):
     """
     Single Layer BN and Relui
     """
     return nn.Sequential(mynn.Norm2d(channels),
                          nn.ReLU(inplace=True))
+
 
 class GlobalAvgPool2d(nn.Module):
     """
@@ -65,6 +67,7 @@ class IdentityResidualBlock(nn.Module):
     """
     Identity Residual Block for WideResnet
     """
+
     def __init__(self,
                  in_channels,
                  channels,
@@ -107,7 +110,6 @@ class IdentityResidualBlock(nn.Module):
 
         # Check if we are using distributed BN and use the nn from encoding.nn
         # library rather than using standard pytorch.nn
-
 
         # Check parameters for inconsistencies
         if len(channels) != 2 and len(channels) != 3:
@@ -182,12 +184,11 @@ class IdentityResidualBlock(nn.Module):
         return out
 
 
-
-
 class WiderResNet(nn.Module):
     """
     WideResnet Global Module for Initialization
     """
+
     def __init__(self,
                  structure,
                  norm_act=bnrelu,
@@ -285,6 +286,7 @@ class WiderResNetA2(nn.Module):
         If `True` apply dilation to the last three modules and change the
         down-sampling factor from 32 to 8.
     """
+
     def __init__(self,
                  structure,
                  norm_act=bnrelu,
@@ -296,7 +298,6 @@ class WiderResNetA2(nn.Module):
         self.dist_bn = dist_bn
 
         # If using distributed batch norm, use the encoding.nn as oppose to torch.nn
-
 
         nn.Dropout = nn.Dropout2d
         norm_act = bnrelu

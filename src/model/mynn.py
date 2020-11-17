@@ -3,11 +3,13 @@ Custom Norm wrappers to enable sync BN, regular BN and for weight initialization
 """
 import torch.nn as nn
 
+
 def Norm2d(in_channels):
     """
     Custom Norm Function to allow flexible switching
     """
     return nn.BatchNorm2d(in_channels)
+
 
 def initialize_weights(*models):
     """
@@ -22,6 +24,7 @@ def initialize_weights(*models):
             elif isinstance(module, nn.BatchNorm2d):
                 module.weight.data.fill_(1)
                 module.bias.data.zero_()
+
 
 def Upsample(x, size):
     """

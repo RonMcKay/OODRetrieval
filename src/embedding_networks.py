@@ -2,7 +2,6 @@
 
 import re
 import torch
-import torch.nn as nn
 import torch.nn.functional as f
 import torchvision.models as models
 from torchvision.models.vgg import VGG, make_layers, cfgs
