@@ -139,7 +139,7 @@ class Discovery(object):
                 self.embeddings = self.data['nn_embeddings']
                 self.log.info(('Loaded reduced embeddings ({} dimensions) from precomputed file '
                                + 'for nearest neighbor search.').format(self.embeddings.shape[1]))
-            else:
+            elif rewrite:
                 if method == 'TSNE':
                     if 'plot_embeddings' in self.data.keys() and embedding_size == 2 and new_plot_embeddings:
                         self.embeddings = self.data['plot_embeddings']
@@ -159,6 +159,10 @@ class Discovery(object):
                                              n_jobs=n_jobs,
                                              ).fit_transform(embeddings)
                 self.data['nn_embeddings'] = self.embeddings
+            else:
+                raise ValueError("Please specify a valid combination of arguments.\nLoading fails if "
+                                 "'overwrite_embeddings' is False and saved 'embedding_size' does not match the "
+                                 "requested one.")
 
             # Write added data into pickle file
             if rewrite:

@@ -35,7 +35,7 @@ def config():
     args['save_dir'] = abspath(join(CONFIG.metaseg_io_path, 'vis_' + splitext(basename(args['embeddings_file']))[0]))
 
     mainplot = dict(
-        legend=True
+        legend=False
     )
 
     tsne = dict(
