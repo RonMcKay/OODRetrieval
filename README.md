@@ -1,6 +1,6 @@
 ![Image of an embedding space](./embedding_space_density.png)
 
-This repository supplies the code to the paper 'Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation'. Please have a look at the [paper](https://arxiv.org/abs/2005.06831) or our [presentation](https://youtu.be/T6rrAE47CFw).
+This repository supplies the code to the paper *'Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation'*. Please have a look at the [paper](https://arxiv.org/abs/2005.06831) or our [presentation](https://youtu.be/T6rrAE47CFw).
 
 DeepLabV3+ model and pretrained cityscapes weights are from [NVIDIA's Semantic Segmentation](
 https://github.com/NVIDIA/semantic-segmentation) repository.\
@@ -117,14 +117,14 @@ c | Starts a clustering with k-means as standard algorithm. You will be asked fo
 \# | Cycles through all available clustering algorithms. Currently there is k-means, spectral- and agglomerative-clustering (with ward linkage) supported.
 
 #### Citing
-@inproceedings{Oberdiek2020,
-author = {Philipp Oberdiek and
-          Matthias Rottmann and
-          Gernot A. Fink},
-title = {Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation},
-booktitle = {2020 {IEEE/CVF} Conference on Computer Vision and Pattern Recognition,
-             {CVPR} Workshops 2020, Seattle, WA, USA, June 14-19, 2020},
-pages = {1331--1340},
-publisher = {{IEEE}},
-year = {2020},
+@inproceedings{Oberdiek2020,\
+author = {Philipp Oberdiek and\
+          Matthias Rottmann and\
+          Gernot A. Fink},\
+title = {Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation},\
+booktitle = {2020 {IEEE/CVF} Conference on Computer Vision and Pattern Recognition,\
+             {CVPR} Workshops 2020, Seattle, WA, USA, June 14-19, 2020},\
+pages = {1331--1340},\
+publisher = {{IEEE}},\
+year = {2020},\
 }
