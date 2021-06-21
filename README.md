@@ -1,9 +1,11 @@
 ![Image of an embedding space](./embedding_space_density.png)
 
+This repository supplies the code to the paper 'Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation'. Please have a look at the [paper](https://arxiv.org/abs/2005.06831) or our [presentation](https://youtu.be/T6rrAE47CFw).
+
 DeepLabV3+ model and pretrained cityscapes weights are from [NVIDIA's Semantic Segmentation](
 https://github.com/NVIDIA/semantic-segmentation) repository.\
 The original MetaSeg Code can be found in the repository to the paper
-[Prediction Error Meta Classification in Semantic Segmentation: 
+[Prediction Error Meta Classification in Semantic Segmentation:
 Detection via Aggregated Dispersion Measures of Softmax Probabilites](https://github.com/mrottmann/MetaSeg).
 
 #### DeepLabv3+ Model and Datasets
@@ -32,7 +34,7 @@ in the depicted order. For later runs you may omit some of them as most of the r
 stored on disk.
 
 1. The `pred_images.py` script will take the images of the dataset defined in `configuration.py`
-and predict the semantic segmentation masks. Note that this step takes up the most disk space 
+and predict the semantic segmentation masks. Note that this step takes up the most disk space
 as predictions are saved for later processing. A single image of the cityscapes dataset takes up around
 185MB. The inference of the DeepLabv3+ model requires a GPU with at least 6.5 GB of memory.
 2. `src/MetaSeg/main.py` computes all MetaSeg metrics and connected components on the predictions
@@ -66,7 +68,7 @@ training dataset the class has to provide the attribute `pred_mapping` containin
 class ids that returns a tuple `(class_name, class_rgb_color)` with `class_name` being a string depicting the name of
 the class and `class_rgb_color` being a tuple containing the RGB color for this class. RGB values should be in the range
 [0, 255]. If you also want to including some ground truth information you can provide a `label_mapping` attribute which
-contains a similar mapping as the `pred_mapping` attribute but for all available ground truth classes. There are 
+contains a similar mapping as the `pred_mapping` attribute but for all available ground truth classes. There are
 `pred_mapping` **and** `label_mapping` attributes as the set of predicted classes can differ from the total available
 set of classes.
 
@@ -113,4 +115,16 @@ b | Colors the scatter in a uniform blue color.
 d | Shows a global gaussian kernel density estimate in the background.
 c | Starts a clustering with k-means as standard algorithm. You will be asked for the number of clusters you want to compute. Typing 'elbow' will give you the opportunity to estimate the optimal number of clusters. This only works with the k-means algorithm.
 \# | Cycles through all available clustering algorithms. Currently there is k-means, spectral- and agglomerative-clustering (with ward linkage) supported.
-    
+
+#### Citing
+@inproceedings{Oberdiek2020,
+author = {Philipp Oberdiek and
+          Matthias Rottmann and
+          Gernot A. Fink},
+title = {Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation},
+booktitle = {2020 {IEEE/CVF} Conference on Computer Vision and Pattern Recognition,
+             {CVPR} Workshops 2020, Seattle, WA, USA, June 14-19, 2020},
+pages = {1331--1340},
+publisher = {{IEEE}},
+year = {2020},
+}
