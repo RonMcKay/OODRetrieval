@@ -4,14 +4,15 @@ This repository supplies the code to the paper **'Detection and Retrieval of Out
 
 DeepLabV3+ model and pretrained cityscapes weights are from [NVIDIA's Semantic Segmentation](
 https://github.com/NVIDIA/semantic-segmentation) repository.\
+NOTE: Due to a change in NVIDIA's Semantic Segmentation Repository the DeepLabv3+ model weights which were used in this publication can no longer be downloaded. We therefor hosted them and they can be downloaded [here](https://tu-dortmund.sciebo.de/s/g9ywugdg7J5GHSf).
+
 The original MetaSeg Code can be found in the repository to the paper
 [Prediction Error Meta Classification in Semantic Segmentation:
 Detection via Aggregated Dispersion Measures of Softmax Probabilites](https://github.com/mrottmann/MetaSeg).
 
 #### DeepLabv3+ Model and Datasets
 
-- You can get pretrained model weights for the DeepLabv3+ architecture that we used from
-[NVIDIA's Semantic Segmentation](https://github.com/NVIDIA/semantic-segmentation) repository.
+- As mentioned above the pretrained model weights for the DeepLabv3+ architecture were previously acquired from [NVIDIA's Semantic Segmentation](https://github.com/NVIDIA/semantic-segmentation) repository but are no longer available there. You can download the model weights used in this publication [here](https://tu-dortmund.sciebo.de/s/g9ywugdg7J5GHSf).
 - [A2D2 Dataset](https://www.audi-electronics-venture.de/aev/web/de/driving-dataset.html)
 - [Cityscapes Dataset](https://www.cityscapes-dataset.com/)
 
