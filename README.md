@@ -1,5 +1,7 @@
 ![Image of an embedding space](./embedding_space_density.png)
 
+![GitHub](https://img.shields.io/github/license/ronmckay/oodretrieval) ![GitHub repo size](https://img.shields.io/github/repo-size/ronmckay/oodretrieval?logo=github) ![GitHub Repo stars](https://img.shields.io/github/stars/ronmckay/oodretrieval?logo=github) ![](https://img.shields.io/badge/mail-contact-informational?link=mailto:philipp.oberdiek@cs.tu-dortmund.de&link=mailto:philipp.oberdiek@cs.tu-dortmund.de) ![YouTube Video Views](https://img.shields.io/youtube/views/T6rrAE47CFw?label=Presentation&style=social)
+
 This repository supplies the code to the paper **'Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation'**. Please have a look at the [paper](https://arxiv.org/abs/2005.06831) or our [presentation](https://youtu.be/T6rrAE47CFw).
 
 DeepLabV3+ model and pretrained cityscapes weights are from [NVIDIA's Semantic Segmentation](
