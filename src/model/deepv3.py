@@ -24,12 +24,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 """
 import logging
+
 import torch
 from torch import nn
-from . import SEresnext
-from . import Resnet
+
+from . import Resnet, SEresnext
+from .mynn import Norm2d, Upsample, initialize_weights
 from .wider_resnet import wider_resnet38_a2
-from .mynn import initialize_weights, Norm2d, Upsample
 
 
 class _AtrousSpatialPyramidPoolingModule(nn.Module):
@@ -55,28 +56,42 @@ class _AtrousSpatialPyramidPoolingModule(nn.Module):
         elif output_stride == 16:
             pass
         else:
-            raise 'output stride of {} not supported'.format(output_stride)
+            raise "output stride of {} not supported".format(output_stride)
 
         self.features = []
         # 1x1
         self.features.append(
-            nn.Sequential(nn.Conv2d(in_dim, reduction_dim, kernel_size=1, bias=False),
-                          Norm2d(reduction_dim), nn.ReLU(inplace=True)))
+            nn.Sequential(
+                nn.Conv2d(in_dim, reduction_dim, kernel_size=1, bias=False),
+                Norm2d(reduction_dim),
+                nn.ReLU(inplace=True),
+            )
+        )
         # other rates
         for r in rates:
-            self.features.append(nn.Sequential(
-                nn.Conv2d(in_dim, reduction_dim, kernel_size=3,
-                          dilation=r, padding=r, bias=False),
-                Norm2d(reduction_dim),
-                nn.ReLU(inplace=True)
-            ))
+            self.features.append(
+                nn.Sequential(
+                    nn.Conv2d(
+                        in_dim,
+                        reduction_dim,
+                        kernel_size=3,
+                        dilation=r,
+                        padding=r,
+                        bias=False,
+                    ),
+                    Norm2d(reduction_dim),
+                    nn.ReLU(inplace=True),
+                )
+            )
         self.features = torch.nn.ModuleList(self.features)
 
         # img level features
         self.img_pooling = nn.AdaptiveAvgPool2d(1)
         self.img_conv = nn.Sequential(
             nn.Conv2d(in_dim, reduction_dim, kernel_size=1, bias=False),
-            Norm2d(reduction_dim), nn.ReLU(inplace=True))
+            Norm2d(reduction_dim),
+            nn.ReLU(inplace=True),
+        )
 
     def forward(self, x):
         x_size = x.size()
@@ -100,61 +115,75 @@ class DeepV3Plus(nn.Module):
     with skip connections
     """
 
-    def __init__(self, num_classes, trunk='seresnext-50', criterion=nn.NLLLoss(), variant='D',
-                 skip='m1', skip_num=48):
+    def __init__(
+        self,
+        num_classes,
+        trunk="seresnext-50",
+        criterion=nn.NLLLoss(),
+        variant="D",
+        skip="m1",
+        skip_num=48,
+    ):
         super(DeepV3Plus, self).__init__()
         self.criterion = criterion
         self.variant = variant
         self.skip = skip
         self.skip_num = skip_num
 
-        if trunk == 'seresnext-50':
+        if trunk == "seresnext-50":
             resnet = SEresnext.se_resnext50_32x4d()
-        elif trunk == 'seresnext-101':
+        elif trunk == "seresnext-101":
             resnet = SEresnext.se_resnext101_32x4d()
-        elif trunk == 'resnet-50':
+        elif trunk == "resnet-50":
             resnet = Resnet.resnet50()
-            resnet.layer0 = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool)
-        elif trunk == 'resnet-101':
+            resnet.layer0 = nn.Sequential(
+                resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool
+            )
+        elif trunk == "resnet-101":
             resnet = Resnet.resnet101()
-            resnet.layer0 = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool)
+            resnet.layer0 = nn.Sequential(
+                resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool
+            )
         else:
             raise ValueError("Not a valid network arch")
 
         self.layer0 = resnet.layer0
-        self.layer1, self.layer2, self.layer3, self.layer4 = \
-            resnet.layer1, resnet.layer2, resnet.layer3, resnet.layer4
+        self.layer1, self.layer2, self.layer3, self.layer4 = (
+            resnet.layer1,
+            resnet.layer2,
+            resnet.layer3,
+            resnet.layer4,
+        )
 
-        if self.variant == 'D':
+        if self.variant == "D":
             for n, m in self.layer3.named_modules():
-                if 'conv2' in n:
+                if "conv2" in n:
                     m.dilation, m.padding, m.stride = (2, 2), (2, 2), (1, 1)
-                elif 'downsample.0' in n:
+                elif "downsample.0" in n:
                     m.stride = (1, 1)
             for n, m in self.layer4.named_modules():
-                if 'conv2' in n:
+                if "conv2" in n:
                     m.dilation, m.padding, m.stride = (4, 4), (4, 4), (1, 1)
-                elif 'downsample.0' in n:
+                elif "downsample.0" in n:
                     m.stride = (1, 1)
-        elif self.variant == 'D16':
+        elif self.variant == "D16":
             for n, m in self.layer4.named_modules():
-                if 'conv2' in n:
+                if "conv2" in n:
                     m.dilation, m.padding, m.stride = (2, 2), (2, 2), (1, 1)
-                elif 'downsample.0' in n:
+                elif "downsample.0" in n:
                     m.stride = (1, 1)
         else:
             # raise 'unknown deepv3 variant: {}'.format(self.variant)
             print("Not using Dilation ")
 
-        self.aspp = _AtrousSpatialPyramidPoolingModule(2048, 256,
-                                                       output_stride=8)
+        self.aspp = _AtrousSpatialPyramidPoolingModule(2048, 256, output_stride=8)
 
-        if self.skip == 'm1':
+        if self.skip == "m1":
             self.bot_fine = nn.Conv2d(256, self.skip_num, kernel_size=1, bias=False)
-        elif self.skip == 'm2':
+        elif self.skip == "m2":
             self.bot_fine = nn.Conv2d(512, self.skip_num, kernel_size=1, bias=False)
         else:
-            raise Exception('Not a valid skip')
+            raise Exception("Not a valid skip")
 
         self.bot_aspp = nn.Conv2d(1280, 256, kernel_size=1, bias=False)
 
@@ -165,7 +194,8 @@ class DeepV3Plus(nn.Module):
             nn.Conv2d(256, 256, kernel_size=3, padding=1, bias=False),
             Norm2d(256),
             nn.ReLU(inplace=True),
-            nn.Conv2d(256, num_classes, kernel_size=1, bias=False))
+            nn.Conv2d(256, num_classes, kernel_size=1, bias=False),
+        )
 
         initialize_weights(self.aspp)
         initialize_weights(self.bot_aspp)
@@ -183,7 +213,7 @@ class DeepV3Plus(nn.Module):
         xp = self.aspp(x4)
 
         dec0_up = self.bot_aspp(xp)
-        if self.skip == 'm1':
+        if self.skip == "m1":
             dec0_fine = self.bot_fine(x1)
             dec0_up = Upsample(dec0_up, x1.size()[2:])
         else:
@@ -215,19 +245,12 @@ class DeepWV3Plus(nn.Module):
                   (1024, 2048, 4096)]
     """
 
-    def __init__(self, num_classes, trunk='WideResnet38', criterion=nn.NLLLoss()):
+    def __init__(self, num_classes, trunk="WideResnet38", criterion=nn.NLLLoss()):
         super(DeepWV3Plus, self).__init__()
         self.criterion = criterion
         logging.debug("Trunk: %s", trunk)
         wide_resnet = wider_resnet38_a2(classes=1000, dilation=True)
         wide_resnet = torch.nn.DataParallel(wide_resnet)
-        #         try:
-        #             checkpoint = torch.load('./pretrained_models/wider_resnet38.pth.tar', map_location='cpu')
-        #             wide_resnet.load_state_dict(checkpoint['state_dict'])
-        #             del checkpoint
-        #         except:
-        #             print("=====================Could not load ImageNet weights=======================")
-        #             print("Please download the ImageNet weights of WideResNet38 in our repo to ./pretrained_models.")
 
         wide_resnet = wide_resnet.module
 
@@ -242,8 +265,7 @@ class DeepWV3Plus(nn.Module):
         self.pool3 = wide_resnet.pool3
         del wide_resnet
 
-        self.aspp = _AtrousSpatialPyramidPoolingModule(4096, 256,
-                                                       output_stride=8)
+        self.aspp = _AtrousSpatialPyramidPoolingModule(4096, 256, output_stride=8)
 
         self.bot_fine = nn.Conv2d(128, 48, kernel_size=1, bias=False)
         self.bot_aspp = nn.Conv2d(1280, 256, kernel_size=1, bias=False)
@@ -255,7 +277,8 @@ class DeepWV3Plus(nn.Module):
             nn.Conv2d(256, 256, kernel_size=3, padding=1, bias=False),
             Norm2d(256),
             nn.ReLU(inplace=True),
-            nn.Conv2d(256, num_classes, kernel_size=1, bias=False))
+            nn.Conv2d(256, num_classes, kernel_size=1, bias=False),
+        )
 
         initialize_weights(self.final)
 
@@ -286,20 +309,24 @@ def DeepSRNX50V3PlusD_m1(num_classes, criterion):
     """
     SEResnet 50 Based Network
     """
-    return DeepV3Plus(num_classes, trunk='seresnext-50', criterion=criterion, variant='D',
-                      skip='m1')
+    return DeepV3Plus(
+        num_classes, trunk="seresnext-50", criterion=criterion, variant="D", skip="m1"
+    )
 
 
 def DeepR50V3PlusD_m1(num_classes, criterion):
     """
     Resnet 50 Based Network
     """
-    return DeepV3Plus(num_classes, trunk='resnet-50', criterion=criterion, variant='D', skip='m1')
+    return DeepV3Plus(
+        num_classes, trunk="resnet-50", criterion=criterion, variant="D", skip="m1"
+    )
 
 
 def DeepSRNX101V3PlusD_m1(num_classes, criterion):
     """
     SeResnext 101 Based Network
     """
-    return DeepV3Plus(num_classes, trunk='seresnext-101', criterion=criterion, variant='D',
-                      skip='m1')
+    return DeepV3Plus(
+        num_classes, trunk="seresnext-101", criterion=criterion, variant="D", skip="m1"
+    )

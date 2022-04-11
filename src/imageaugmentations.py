@@ -1,27 +1,27 @@
-# adjusted from 
+# adjusted from
 # https://github.com/meetshah1995/pytorch-semseg/tree/master/ptsemseg
 
-# Adapted from 
+# Adapted from
 # https://github.com/ZijunDeng/pytorch-semantic-segmentation/blob/master/utils/joint_transforms.py
 
+import logging
 import math
 import numbers
-import logging
 import random
 import types
+
+from PIL import Image, ImageOps
 import numpy as np
 import torch
 import torchvision.transforms as trans
 
-from PIL import Image, ImageOps
-
 
 class Compose(object):
     """Wraps together multiple image augmentations.
-    
+
     Should also be used with only one augmentation, as it ensures, that input
     images are of type 'PIL.Image' and handles the augmentation process.
-    
+
     Args:
         augmentations: List of augmentations to be applied.
     """
@@ -40,7 +40,7 @@ class Compose(object):
 
 class RandomCrop(object):
     """Returns an image of size 'size' that is a random crop of the original.
-    
+
     Args:
         size: Size of the croped image.
         padding: Number of pixels to be placed around the original image.
@@ -65,21 +65,27 @@ class RandomCrop(object):
         if w == tw and h == th:
             return img, mask
         if w < tw or h < th:
-            return (img.resize((tw, th), Image.BILINEAR),
-                    mask.resize((tw, th), Image.NEAREST), *inputs)
+            return (
+                img.resize((tw, th), Image.BILINEAR),
+                mask.resize((tw, th), Image.NEAREST),
+                *inputs,
+            )
 
         x1 = random.randint(0, w - tw)
         y1 = random.randint(0, h - th)
-        return (img.crop((x1, y1, x1 + tw, y1 + th)),
-                mask.crop((x1, y1, x1 + tw, y1 + th)), *inputs)
+        return (
+            img.crop((x1, y1, x1 + tw, y1 + th)),
+            mask.crop((x1, y1, x1 + tw, y1 + th)),
+            *inputs,
+        )
 
 
 class CenterCrop(object):
     """Returns image of size 'size' that is center cropped.
-    
+
     Crops an image of size 'size' from the center of an image. If the center
     index is not an integer, the value will be rounded.
-    
+
     Args:
         size: The size of the output image.
     """
@@ -94,15 +100,18 @@ class CenterCrop(object):
         assert img.size == mask.size
         w, h = img.size
         th, tw = self.size
-        x1 = int(round((w - tw) / 2.))
-        y1 = int(round((h - th) / 2.))
-        return (img.crop((x1, y1, x1 + tw, y1 + th)),
-                mask.crop((x1, y1, x1 + tw, y1 + th)), *inputs)
+        x1 = int(round((w - tw) / 2.0))
+        y1 = int(round((h - th) / 2.0))
+        return (
+            img.crop((x1, y1, x1 + tw, y1 + th)),
+            mask.crop((x1, y1, x1 + tw, y1 + th)),
+            *inputs,
+        )
 
 
 class RandomHorizontalFlip(object):
     """Returns an image the got flipped with a probability of 'prob'.
-    
+
     Args:
         prob: Probability with which the horizontal flip is applied.
     """
@@ -114,8 +123,11 @@ class RandomHorizontalFlip(object):
 
     def __call__(self, img, mask, *inputs, **kwargs):
         if random.random() < self.prob:
-            return (img.transpose(Image.FLIP_LEFT_RIGHT),
-                    mask.transpose(Image.FLIP_LEFT_RIGHT), *inputs)
+            return (
+                img.transpose(Image.FLIP_LEFT_RIGHT),
+                mask.transpose(Image.FLIP_LEFT_RIGHT),
+                *inputs,
+            )
         return (img, mask, *inputs)
 
 
@@ -125,8 +137,11 @@ class FreeScale(object):
 
     def __call__(self, img, mask, *inputs, **kwargs):
         assert img.size == mask.size
-        return (img.resize(self.size, Image.BILINEAR),
-                mask.resize(self.size, Image.NEAREST), *inputs)
+        return (
+            img.resize(self.size, Image.BILINEAR),
+            mask.resize(self.size, Image.NEAREST),
+            *inputs,
+        )
 
 
 class Scale(object):
@@ -141,13 +156,19 @@ class Scale(object):
         if w > h:
             ow = self.size
             oh = int(self.size * h / w)
-            return (img.resize((ow, oh), Image.BILINEAR),
-                    mask.resize((ow, oh), Image.NEAREST), *inputs)
+            return (
+                img.resize((ow, oh), Image.BILINEAR),
+                mask.resize((ow, oh), Image.NEAREST),
+                *inputs,
+            )
         else:
             oh = self.size
             ow = int(self.size * w / h)
-            return (img.resize((ow, oh), Image.BILINEAR),
-                    mask.resize((ow, oh), Image.NEAREST), *inputs)
+            return (
+                img.resize((ow, oh), Image.BILINEAR),
+                mask.resize((ow, oh), Image.NEAREST),
+                *inputs,
+            )
 
 
 class RandomSizedCrop(object):
@@ -173,10 +194,13 @@ class RandomSizedCrop(object):
 
                 img = img.crop((x1, y1, x1 + w, y1 + h))
                 mask = mask.crop((x1, y1, x1 + w, y1 + h))
-                assert (img.size == (w, h))
+                assert img.size == (w, h)
 
-                return (img.resize((self.size, self.size), Image.BILINEAR),
-                        mask.resize((self.size, self.size), Image.NEAREST), *inputs)
+                return (
+                    img.resize((self.size, self.size), Image.BILINEAR),
+                    mask.resize((self.size, self.size), Image.NEAREST),
+                    *inputs,
+                )
 
         # Fallback
         scale = Scale(self.size)
@@ -192,8 +216,11 @@ class RandomRotate(object):
 
     def __call__(self, img, mask, *inputs, **kwargs):
         rotate_degree = random.random() * 2 * self.degree - self.degree
-        return (img.rotate(rotate_degree, Image.BILINEAR),
-                mask.rotate(rotate_degree, Image.NEAREST), *inputs)
+        return (
+            img.rotate(rotate_degree, Image.BILINEAR),
+            mask.rotate(rotate_degree, Image.NEAREST),
+            *inputs,
+        )
 
 
 class RandomSized(object):
@@ -210,21 +237,29 @@ class RandomSized(object):
         w = int(random.uniform(self.min_scale, self.max_scale) * img.size[0])
         h = int(random.uniform(self.min_scale, self.max_scale) * img.size[1])
 
-        img, mask = img.resize((w, h), Image.BILINEAR), \
-            mask.resize((w, h), Image.NEAREST)
+        img, mask = img.resize((w, h), Image.BILINEAR), mask.resize(
+            (w, h), Image.NEAREST
+        )
 
         return self.crop(*self.scale(img, mask, *inputs))
 
 
 class RandomOcclusion(object):
-    def __init__(self, build_prob=0.5, secondary_build_prob=0.99, occlusion_class=-1, start_points=5, min_size=100):
+    def __init__(
+        self,
+        build_prob=0.5,
+        secondary_build_prob=0.99,
+        occlusion_class=-1,
+        start_points=5,
+        min_size=100,
+    ):
         self.log = logging.getLogger(__name__)
         if build_prob > 1 or build_prob < 0:
-            self.log.error('build_prob has to be between 0 and 1!')
-            raise ValueError('build_prob has to be between 0 and 1!')
+            self.log.error("build_prob has to be between 0 and 1!")
+            raise ValueError("build_prob has to be between 0 and 1!")
         if secondary_build_prob > 1 or secondary_build_prob < 0:
-            self.log.error('secondary_build_prob has to be between 0 and 1!')
-            raise ValueError('secondary_build_prob has to be between 0 and 1!')
+            self.log.error("secondary_build_prob has to be between 0 and 1!")
+            raise ValueError("secondary_build_prob has to be between 0 and 1!")
         self.build_prob = build_prob
         self.secondary_build_prob = secondary_build_prob
         self.occlusion_class = occlusion_class
@@ -260,18 +295,23 @@ class RandomOcclusion(object):
         return (img, mask, *inputs)
 
     def _scan_neighborhood(self, i, j):
-        grid = [(i - 1, j - 1),
-                (i - 1, j),
-                (i - 1, j + 1),
-                (i, j - 1),
-                (i, j + 1),
-                (i + 1, j - 1),
-                (i + 1, j),
-                (i + 1, j + 1)]
+        grid = [
+            (i - 1, j - 1),
+            (i - 1, j),
+            (i - 1, j + 1),
+            (i, j - 1),
+            (i, j + 1),
+            (i + 1, j - 1),
+            (i + 1, j),
+            (i + 1, j + 1),
+        ]
         if random.random() < self.build_prob:
             for ind in grid:
                 if 0 <= ind[0] < self.img_height and 0 <= ind[1] < self.img_width:
-                    if self.flags[ind] == 0 and random.random() < self.secondary_build_prob:
+                    if (
+                        self.flags[ind] == 0
+                        and random.random() < self.secondary_build_prob
+                    ):
                         self.queue.append(ind)
                         self.occlusion_map[ind] = 1
                     self.flags[ind] = 1
@@ -307,10 +347,14 @@ class RandomNoiseImage(object):
 class ToTensor(object):
     def __call__(self, image, mask, *inputs, **kwargs):
         t = trans.ToTensor()
-        return (t(image), torch.tensor(np.array(mask, dtype=np.uint8), dtype=torch.long), *inputs)
+        return (
+            t(image),
+            torch.tensor(np.array(mask, dtype=np.uint8), dtype=torch.long),
+            *inputs,
+        )
 
     def __repr__(self, *inputs, **kwargs):
-        return self.__class__.__name__ + '()'
+        return self.__class__.__name__ + "()"
 
 
 class Normalize(object):
@@ -343,4 +387,4 @@ class Lambda(object):
         return self.lambd(img, mask, *inputs)
 
     def __repr__(self, *inputs, **kwargs):
-        return self.__class__.__name__ + '()'
+        return self.__class__.__name__ + "()"

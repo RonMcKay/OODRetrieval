@@ -30,5 +30,4 @@ def Upsample(x, size):
     """
     Wrapper Around the Upsample Call
     """
-    return nn.functional.interpolate(x, size=size, mode='bilinear',
-                                     align_corners=True)
+    return nn.functional.interpolate(x, size=size, mode="bilinear", align_corners=True)

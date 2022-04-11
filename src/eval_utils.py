@@ -1,27 +1,30 @@
-import numpy as np
 import logging
 
+import numpy as np
 
-def iou_numpy(pred: np.ndarray,
-              target: np.ndarray,
-              n_classes: int,
-              update_matrix: np.ndarray = None,
-              ignore_index: int = 255,
-              mask: np.ndarray = None,
-              average: bool = True,
-              eps: float = 1e-6):
-    log = logging.getLogger('iou_numpy')
+
+def iou_numpy(
+    pred: np.ndarray,
+    target: np.ndarray,
+    n_classes: int,
+    update_matrix: np.ndarray = None,
+    ignore_index: int = 255,
+    mask: np.ndarray = None,
+    average: bool = True,
+    eps: float = 1e-6,
+):
+    log = logging.getLogger("iou_numpy")
     if mask is None:
         mask = target != ignore_index
     else:
         mask = mask.astype(np.bool) & (target != ignore_index) & (pred != ignore_index)
 
-    log.debug('mask shape: {}'.format(mask.shape))
+    log.debug("mask shape: {}".format(mask.shape))
     pred = pred[mask]
     target = target[mask]
 
-    log.debug('pred shape: {}'.format(pred.shape))
-    log.debug('target shape: {}'.format(target.shape))
+    log.debug("pred shape: {}".format(pred.shape))
+    log.debug("target shape: {}".format(target.shape))
 
     if target.shape[0] > 0:
         confusion_matrix = np.zeros((n_classes, n_classes))
