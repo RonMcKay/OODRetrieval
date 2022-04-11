@@ -1,6 +1,10 @@
 ![Image of an embedding space](./embedding_space_density.png)
 
-![GitHub](https://img.shields.io/github/license/ronmckay/oodretrieval) ![GitHub repo size](https://img.shields.io/github/repo-size/ronmckay/oodretrieval?logo=github) ![GitHub Repo stars](https://img.shields.io/github/stars/ronmckay/oodretrieval?logo=github) <a href="mailto:philipp.oberdiek@cs.tu-dortmund.de"><img src="https://img.shields.io/badge/mail-contact-informational?link=mailto:philipp.oberdiek@cs.tu-dortmund.de&link=mailto:philipp.oberdiek@cs.tu-dortmund.de"/></a> <a href="https://youtu.be/T6rrAE47CFw"><img src="https://img.shields.io/youtube/views/T6rrAE47CFw?label=Presentation&style=social"/></a>
+<div align="center">
+
+[![GitHub](https://img.shields.io/github/license/ronmckay/oodretrieval)](https://github.com/RonMcKay/OODRetrieval/blob/master/LICENSE) ![GitHub repo size](https://img.shields.io/github/repo-size/ronmckay/oodretrieval?logo=github) ![GitHub Repo stars](https://img.shields.io/github/stars/ronmckay/oodretrieval?logo=github) [![](https://img.shields.io/badge/mail-contact-informational?link=mailto:git@oberdiek.net&link=mailto:git@oberdiek.net)](mailto:git@oberdiek.net) [![](https://img.shields.io/youtube/views/T6rrAE47CFw?label=Presentation&style=social)](https://youtu.be/T6rrAE47CFw)
+
+</div>
 
 This repository supplies the code to the paper **'Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation'**. Please have a look at the [paper](https://arxiv.org/abs/2005.06831) or our [presentation](https://youtu.be/T6rrAE47CFw).
 
@@ -21,7 +25,7 @@ Detection via Aggregated Dispersion Measures of Softmax Probabilites](https://gi
 #### Preliminaries
 
 - Make sure your cloned copy is on your `PYTHONPATH`.
-- Packages that we used can be found in `requirements.txt`. Demo was tested in a Python 3.7 environment.
+- Packages that we used can be found in `pyproject.toml`. Installation can be easily done with [poetry](https://python-poetry.org/) (`poetry install`)
 - Change all global path definitions within `configuration.py` to suit your environment.
 - Select the dataset that you want to evaluate on with the `DATASET` attribute within `configuration.py`.
 - All scripts have been written utilizing [sacred](https://sacred.readthedocs.io/en/latest/index.html)

@@ -4,11 +4,12 @@ script including
 functions that do calculations
 """
 
+import importlib
+
 import numpy as np
 import pandas as pd
-import torch
 from sklearn import linear_model
-import importlib
+import torch
 
 from configuration import CONFIG, meta_models
 
@@ -23,7 +24,9 @@ def regression_fit_and_predict(x_train, y_train, x_test):
 
 def classification_l1_fit_and_predict(x_train, y_train, lambdas, x_test):
     if CONFIG.META_MODEL_TYPE == "linear":
-        model = linear_model.LogisticRegression(C=lambdas, penalty='l1', solver='saga', max_iter=1000, tol=1e-3)
+        model = linear_model.LogisticRegression(
+            C=lambdas, penalty="l1", solver="saga", max_iter=1000, tol=1e-3
+        )
     model.fit(x_train, y_train)
     y_test_pred = model.predict_proba(x_test)
     y_train_pred = model.predict_proba(x_train)
@@ -32,9 +35,13 @@ def classification_l1_fit_and_predict(x_train, y_train, lambdas, x_test):
 
 def classification_fit_and_predict(x_train, y_train, x_test):
     if CONFIG.META_MODEL_TYPE == "linear":
-        model = linear_model.LogisticRegression(solver='saga', max_iter=1000, tol=1e-3)
+        model = linear_model.LogisticRegression(solver="saga", max_iter=1000, tol=1e-3)
     else:
-        raise ValueError('meta segmentation model \'{}\' not supported by this function.'.format(CONFIG.META_MODEL_TYPE))
+        raise ValueError(
+            "meta segmentation model '{}' not supported by this function.".format(
+                CONFIG.META_MODEL_TYPE
+            )
+        )
     model.fit(x_train, y_train)
     y_test_pred = model.predict_proba(x_test)
     y_train_pred = model.predict_proba(x_train)
@@ -43,12 +50,11 @@ def classification_fit_and_predict(x_train, y_train, x_test):
 
 
 def meta_nn_predict(pretrained_model_path, x_test, gpu=0, batch_size=64):
-    net = getattr(importlib.import_module(meta_models[CONFIG.META_MODEL_NAME].module_name),
-                  meta_models[CONFIG.META_MODEL_NAME].class_name)(
-        x_test.shape[1],
-        **meta_models[CONFIG.META_MODEL_NAME].kwargs
-    ).cuda(gpu)
-    net.load_state_dict(torch.load(pretrained_model_path)['state_dict'])
+    net = getattr(
+        importlib.import_module(meta_models[CONFIG.META_MODEL_NAME].module_name),
+        meta_models[CONFIG.META_MODEL_NAME].class_name,
+    )(x_test.shape[1], **meta_models[CONFIG.META_MODEL_NAME].kwargs).cuda(gpu)
+    net.load_state_dict(torch.load(pretrained_model_path)["state_dict"])
     net.eval()
 
     with torch.no_grad():
@@ -60,12 +66,11 @@ def meta_nn_predict(pretrained_model_path, x_test, gpu=0, batch_size=64):
 
 
 def compute_correlations(metrics):
-    pd.options.display.float_format = '{:,.5f}'.format
+    pd.options.display.float_format = "{:,.5f}".format
     df_full = pd.DataFrame(data=metrics)
     df_full = df_full.copy().drop(["class", "iou0"], axis=1)
-    features = df_full.copy().drop(["iou"], axis=1).columns
     df_all = df_full.copy()
-    df_full = df_full.copy().loc[df_full['S_in'].nonzero()[0]]
+    df_full = df_full.copy().loc[df_full["S_in"].nonzero()[0]]
     return df_all, df_full
 
 

@@ -1,0 +1,48 @@
+name: Lint
+on:
+  pull_request_target:
+
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+
+      - name: Update pip
+        run: python3 -m pip install --upgrade pip
+
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: pip cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ steps.setup-python.outputs.python-version }}-linting
+
+      - name: Install flake8, black and isort
+        run: python3 -m pip install flake8 black isort
+
+      - name: Lint with flake8
+        run: |
+          # stop the action if there are syntax errors or undefined variables
+          flake8 --config=.flake8 --select=E9,F63,F7,F82 .
+          # treat all errors as warnings
+          flake8 --config=.flake8 --count --exit-zero --max-complexity=10 --statistics .
+
+      - name: Check format with black
+        run: black --check .
+
+      - name: Check format with isort
+        run: isort --check --settings-path pyproject.toml .

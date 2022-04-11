@@ -8,77 +8,129 @@ import pyximport
 
 pyximport.install()
 
-import numpy as np
-import time
-import os
-from multiprocessing import Pool
-from sklearn.metrics import mean_squared_error, r2_score, roc_curve, auc
 from functools import partial
+from multiprocessing import Pool
+import os
+import time
+
+import numpy as np
+from sklearn.metrics import auc, mean_squared_error, r2_score, roc_curve
 
 from configuration import CONFIG, meta_models
-from src.MetaSeg.functions.metrics import compute_metrics_components, entropy
-from src.MetaSeg.functions.helper import concatenate_metrics, metrics_to_dataset, get_lambdas, metrics_to_nparray
-from src.MetaSeg.functions.in_out import get_save_path_input_i, get_save_path_metrics_i, probs_gt_load, metrics_dump, \
-    components_dump, stats_dump, metrics_load, components_load, probs_gt_load_all, get_indices
-from src.MetaSeg.functions.plot import visualize_regression_prediction_i, plot_roc_curve, plot_regression, plot_classif, \
-    plot_scatter, plot_classif_hist
-from src.MetaSeg.functions.calculate import regression_fit_and_predict, classification_l1_fit_and_predict, \
-    classification_fit_and_predict, compute_correlations, compute_metrics_from_heatmap, meta_nn_predict
+from src.MetaSeg.functions.calculate import (
+    classification_fit_and_predict,
+    classification_l1_fit_and_predict,
+    compute_correlations,
+    compute_metrics_from_heatmap,
+    meta_nn_predict,
+    regression_fit_and_predict,
+)
+from src.MetaSeg.functions.helper import (
+    concatenate_metrics,
+    get_lambdas,
+    metrics_to_dataset,
+    metrics_to_nparray,
+)
+from src.MetaSeg.functions.in_out import (  # noqa: F401
+    components_dump,
+    components_load,
+    get_indices,
+    get_save_path_input_i,
+    get_save_path_metrics_i,
+    metrics_dump,
+    metrics_load,
+    probs_gt_load,
+    probs_gt_load_all,
+    stats_dump,
+)
+from src.MetaSeg.functions.metrics import (  # noqa: F401
+    compute_metrics_components,
+    entropy,
+)
+from src.MetaSeg.functions.plot import (
+    plot_classif,
+    plot_classif_hist,
+    plot_regression,
+    plot_roc_curve,
+    plot_scatter,
+    visualize_regression_prediction_i,
+)
 
-
-# NOTE: Couldn't use the python logging module here because of clash with the multiprocessing Pool
+# NOTE: Couldn't use the python logging module here because of clash with the
+# multiprocessing Pool
 
 
 class ComputeMetrics(object):
-
-    def __init__(self, num_cores=1, num_imgs=len(os.listdir(CONFIG.INPUT_DIR)), rewrite=True):
+    def __init__(
+        self, num_cores=1, num_imgs=len(os.listdir(CONFIG.INPUT_DIR)), rewrite=True
+    ):
         """
-    object initialization
-    :param num_cores: (int) number of cores used for parallelization
-    :param num_imgs:  (int) number of images to be processed
-    :param rewrite:   (boolean) overwrite existing files if True
-    """
-        self.num_cores = num_cores if not hasattr(CONFIG, 'NUM_CORES') else CONFIG.NUM_CORES
+        object initialization
+        :param num_cores: (int) number of cores used for parallelization
+        :param num_imgs:  (int) number of images to be processed
+        :param rewrite:   (boolean) overwrite existing files if True
+        """
+        self.num_cores = (
+            num_cores if not hasattr(CONFIG, "NUM_CORES") else CONFIG.NUM_CORES
+        )
         self.rewrite = rewrite
         if isinstance(num_imgs, int):
-            num_imgs = get_indices(CONFIG.INPUT_DIR) \
-                if num_imgs == 0 else get_indices(CONFIG.INPUT_DIR)[:num_imgs]
+            num_imgs = (
+                get_indices(CONFIG.INPUT_DIR)
+                if num_imgs == 0
+                else get_indices(CONFIG.INPUT_DIR)[:num_imgs]
+            )
         elif not isinstance(num_imgs, (list, tuple)):
-            raise ValueError('num_imgs should be of type int, list or tuple but received {}'.format(type(num_imgs)))
-        self.num_imgs = num_imgs if not hasattr(CONFIG, 'NUM_IMAGES') \
-            else get_indices(CONFIG.INPUT_DIR)[:CONFIG.NUM_IMAGES]
+            raise ValueError(
+                "num_imgs should be of type int, list or tuple but received {}".format(
+                    type(num_imgs)
+                )
+            )
+        self.num_imgs = (
+            num_imgs
+            if not hasattr(CONFIG, "NUM_IMAGES")
+            else get_indices(CONFIG.INPUT_DIR)[: CONFIG.NUM_IMAGES]
+        )
 
     def compute_metrics_per_image(self):
         """
-    perform metrics computation
-    """
-        print("Calculating metrics for \'{}\'".format(CONFIG.DATASET.name))
+        perform metrics computation
+        """
+        print("Calculating metrics for '{}'".format(CONFIG.DATASET.name))
         with Pool(self.num_cores) as p:
-            p.map(partial(self.compute_metrics_i,
-                          input_dir=CONFIG.INPUT_DIR,
-                          metrics_dir=CONFIG.METRICS_DIR,
-                          components_dir=CONFIG.COMPONENTS_DIR), self.num_imgs)
+            p.map(
+                partial(
+                    self.compute_metrics_i,
+                    input_dir=CONFIG.INPUT_DIR,
+                    metrics_dir=CONFIG.METRICS_DIR,
+                    components_dir=CONFIG.COMPONENTS_DIR,
+                ),
+                self.num_imgs,
+            )
 
     def compute_metrics_i(self, i, input_dir, metrics_dir, components_dir):
         """
-    perform metrics computation for one image
-    :param i: (int) id of the image to be processed
-    """
-        if os.path.isfile(get_save_path_input_i(i, input_dir=input_dir)) and self.rewrite:
+        perform metrics computation for one image
+        :param i: (int) id of the image to be processed
+        """
+        if (
+            os.path.isfile(get_save_path_input_i(i, input_dir=input_dir))
+            and self.rewrite
+        ):
             start = time.time()
             probs, gt, _ = probs_gt_load(i, input_dir=input_dir)
             metrics, components = compute_metrics_components(probs, gt)
             metrics_dump(metrics, i, metrics_dir=metrics_dir)
             components_dump(components, i, components_dir=components_dir)
-            print('image {} processed in {}s'.format(i, round(time.time() - start)))
+            print("image {} processed in {}s".format(i, round(time.time() - start)))
 
     def add_heatmaps_as_metric(self, heat_dir, key):
         """
-    add another dispersion heatmap as metric/input for meta model
-    :param heat_dir:  (str) directory with heatmaps as numpy arrays
-    :param key:       (str) new key to access added metric
-    """
-        print('Add {} to metrics'.format(key))
+        add another dispersion heatmap as metric/input for meta model
+        :param heat_dir:  (str) directory with heatmaps as numpy arrays
+        :param key:       (str) new key to access added metric
+        """
+        print("Add {} to metrics".format(key))
         p_args = [(heat_dir, key, k) for k in self.num_imgs]
         with Pool(self.num_cores) as p:
             p.starmap(self.add_heatmap_as_metric_i, p_args)
@@ -86,11 +138,11 @@ class ComputeMetrics(object):
     @staticmethod
     def add_heatmap_as_metric_i(heat_dir, key, i):
         """
-    derive aggregated metrics per image and add to metrics dictionary
-    :param heat_dir:  (str) directory with heatmaps as numpy arrays
-    :param key:       (str) new key to access added metric
-    :param i:         (int) id of the image to be processed
-    """
+        derive aggregated metrics per image and add to metrics dictionary
+        :param heat_dir:  (str) directory with heatmaps as numpy arrays
+        :param key:       (str) new key to access added metric
+        :param i:         (int) id of the image to be processed
+        """
         _, _, path = probs_gt_load(i)
         heat_name = os.path.basename(path)[:-4] + ".npy"
         heatmap = np.load(heat_dir + heat_name)
@@ -107,79 +159,126 @@ class ComputeMetrics(object):
 
 
 class VisualizeMetaPrediction(object):
-
-    def __init__(self, num_cores=1, num_imgs=len(os.listdir(CONFIG.INPUT_DIR)), **kwargs):
+    def __init__(
+        self, num_cores=1, num_imgs=len(os.listdir(CONFIG.INPUT_DIR)), **kwargs
+    ):
         """
-    object initialization
-    :param num_cores: (int) number of cores used for parallelization
-    :param num_imgs:  (int) number of images to be processed
-    """
-        self.num_cores = num_cores if not hasattr(CONFIG, 'NUM_CORES') else CONFIG.NUM_CORES
+        object initialization
+        :param num_cores: (int) number of cores used for parallelization
+        :param num_imgs:  (int) number of images to be processed
+        """
+        self.num_cores = (
+            num_cores if not hasattr(CONFIG, "NUM_CORES") else CONFIG.NUM_CORES
+        )
 
         if isinstance(num_imgs, int):
-            num_imgs = get_indices(CONFIG.INPUT_DIR) \
-                if num_imgs == 0 else get_indices(CONFIG.INPUT_DIR)[:num_imgs]
+            num_imgs = (
+                get_indices(CONFIG.INPUT_DIR)
+                if num_imgs == 0
+                else get_indices(CONFIG.INPUT_DIR)[:num_imgs]
+            )
         elif not isinstance(num_imgs, (list, tuple)):
-            raise ValueError('num_imgs should be of type int, list or tuple but received {}'.format(type(num_imgs)))
-        self.num_imgs = num_imgs if not hasattr(CONFIG, 'NUM_IMAGES') \
-            else get_indices(CONFIG.INPUT_DIR)[:CONFIG.NUM_IMAGES]
+            raise ValueError(
+                "num_imgs should be of type int, list or tuple but received {}".format(
+                    type(num_imgs)
+                )
+            )
+        self.num_imgs = (
+            num_imgs
+            if not hasattr(CONFIG, "NUM_IMAGES")
+            else get_indices(CONFIG.INPUT_DIR)[: CONFIG.NUM_IMAGES]
+        )
 
     def visualize_regression_per_image(self):
         """
-    perform metrics visualization
-    """
+        perform metrics visualization
+        """
         print("Visualization for {} running".format(CONFIG.DATASET.name))
-        metrics, start = concatenate_metrics(self.num_imgs, save=False, metrics_dir=CONFIG.METRICS_DIR)
+        metrics, start = concatenate_metrics(
+            self.num_imgs, save=False, metrics_dir=CONFIG.METRICS_DIR
+        )
         nclasses = np.max(metrics["class"]) + 1
 
-        xa, classes, ya, _, _, _, xa_mean, xa_std, classes_mean, classes_std = metrics_to_dataset(metrics,
-                                                                                                  nclasses,
-                                                                                                  non_empty=False)
+        (
+            xa,
+            classes,
+            ya,
+            _,
+            _,
+            _,
+            xa_mean,
+            xa_std,
+            classes_mean,
+            classes_std,
+        ) = metrics_to_dataset(metrics, nclasses, non_empty=False)
         xa = np.concatenate((xa, classes), axis=-1)
 
-        if CONFIG.META_MODEL_TYPE == 'neural':
-            ya_pred = meta_nn_predict(meta_models[CONFIG.META_MODEL_NAME].model_weights, xa, CONFIG.GPU_ID)
-        elif CONFIG.META_MODEL_TYPE == 'linear':
+        if CONFIG.META_MODEL_TYPE == "neural":
+            ya_pred = meta_nn_predict(
+                meta_models[CONFIG.META_MODEL_NAME].model_weights, xa, CONFIG.GPU_ID
+            )
+        elif CONFIG.META_MODEL_TYPE == "linear":
             ya_pred, _ = regression_fit_and_predict(xa, ya, xa)
         else:
-            raise ValueError('Unknown meta model \'{}\''.format(CONFIG.META_MODEL_TYPE))
+            raise ValueError("Unknown meta model '{}'".format(CONFIG.META_MODEL_TYPE))
         print("Model R2 score: {:.2%}\n".format(r2_score(ya, ya_pred)))
-        p_args = [(ya_pred[start[i]:start[i + 1]], j)
-                  for i, j in enumerate(self.num_imgs)]
+        p_args = [
+            (ya_pred[start[i] : start[i + 1]], j) for i, j in enumerate(self.num_imgs)
+        ]
 
         with Pool(self.num_cores) as p:
             p.starmap(visualize_regression_prediction_i, p_args)
 
 
 class AnalyzeMetrics(object):
-
-    def __init__(self, num_cores=1, num_imgs=len(os.listdir(CONFIG.INPUT_DIR)), n_av=CONFIG.NUM_AVERAGES):
+    def __init__(
+        self,
+        num_cores=1,
+        num_imgs=len(os.listdir(CONFIG.INPUT_DIR)),
+        n_av=CONFIG.NUM_AVERAGES,
+    ):
         """
-    object initialization
-    :param num_cores: (int) number of cores used for parallelization
-    :param num_imgs:  (int) number of images to be processed
-    :param n_av:      (int) number of model fitting runs with random data splits
-    """
-        self.num_cores = num_cores if not hasattr(CONFIG, 'NUM_CORES') else CONFIG.NUM_CORES
+        object initialization
+        :param num_cores: (int) number of cores used for parallelization
+        :param num_imgs:  (int) number of images to be processed
+        :param n_av:      (int) number of model fitting runs with random data splits
+        """
+        self.num_cores = (
+            num_cores if not hasattr(CONFIG, "NUM_CORES") else CONFIG.NUM_CORES
+        )
         if isinstance(num_imgs, int):
-            num_imgs = list(range(len(os.listdir(CONFIG.INPUT_DIR)))) if num_imgs == 0 else list(range(num_imgs))
+            num_imgs = (
+                list(range(len(os.listdir(CONFIG.INPUT_DIR))))
+                if num_imgs == 0
+                else list(range(num_imgs))
+            )
         elif isinstance(num_imgs, (list, tuple)):
             pass
         else:
-            raise ValueError('num_imgs should be of type int, list or tuple but received {}'.format(type(num_imgs)))
-        self.num_imgs = num_imgs if not hasattr(CONFIG, 'NUM_IMAGES') else list(range(CONFIG.NUM_IMAGES))
+            raise ValueError(
+                "num_imgs should be of type int, list or tuple but received {}".format(
+                    type(num_imgs)
+                )
+            )
+        self.num_imgs = (
+            num_imgs
+            if not hasattr(CONFIG, "NUM_IMAGES")
+            else list(range(CONFIG.NUM_IMAGES))
+        )
         self.n_av = n_av
 
     def prepare_analysis(self):
         """
-    prepare metrics analysis
-    create dataframes storing results of meta model per run
-    :return:
-    """
+        prepare metrics analysis
+        create dataframes storing results of meta model per run
+        :return:
+        """
         metrics, start = concatenate_metrics(self.num_imgs, save=False)
         nclasses = np.max(metrics["class"]) + 1
 
-        xa, classes, ya, y0a, x_names, class_names = metrics_to_dataset(metrics, nclasses)
+        xa, classes, ya, y0a, x_names, class_names = metrics_to_dataset(
+            metrics, nclasses
+        )
         xa = np.concatenate((xa, classes), axis=-1)
         self.X_names = x_names + class_names
 
@@ -204,17 +303,38 @@ class AnalyzeMetrics(object):
 
     def init_stats(self):
         """
-    initialize dataframe for storing results
-    """
+        initialize dataframe for storing results
+        """
         stats = dict({})
-        per_alphas_av_stats = ['penalized_val_acc', 'penalized_val_auroc', 'penalized_train_acc',
-                               'penalized_train_auroc',
-                               'plain_val_acc', 'plain_val_auroc', 'plain_train_acc', 'plain_train_auroc', 'coefs']
-        per_av_stats = ['entropy_val_acc', 'entropy_val_auroc', 'entropy_train_acc', 'entropy_train_auroc',
-                        'regr_val_mse', 'regr_val_r2', 'regr_train_mse', 'regr_train_r2',
-                        'entropy_regr_val_mse', 'entropy_regr_val_r2', 'entropy_regr_train_mse',
-                        'entropy_regr_train_r2',
-                        'iou0_found', 'iou0_not_found', 'not_iou0_found', 'not_iou0_not_found']
+        per_alphas_av_stats = [
+            "penalized_val_acc",
+            "penalized_val_auroc",
+            "penalized_train_acc",
+            "penalized_train_auroc",
+            "plain_val_acc",
+            "plain_val_auroc",
+            "plain_train_acc",
+            "plain_train_auroc",
+            "coefs",
+        ]
+        per_av_stats = [
+            "entropy_val_acc",
+            "entropy_val_auroc",
+            "entropy_train_acc",
+            "entropy_train_auroc",
+            "regr_val_mse",
+            "regr_val_r2",
+            "regr_train_mse",
+            "regr_train_r2",
+            "entropy_regr_val_mse",
+            "entropy_regr_val_r2",
+            "entropy_regr_train_mse",
+            "entropy_regr_train_r2",
+            "iou0_found",
+            "iou0_not_found",
+            "not_iou0_found",
+            "not_iou0_not_found",
+        ]
 
         for s in per_alphas_av_stats:
             stats[s] = 0.5 * np.ones((self.n_av, len(self.lambdas)))
@@ -232,60 +352,88 @@ class AnalyzeMetrics(object):
 
     def fit_model_run(self, xa, ya, y0a, single_run_stats, run):
         """
-    fit meta model for one random data split and store results in dataframe
-    :param xa:  (np array) dispersion metrics as input for meta model
-    :param ya:  (np array) meta regression label of segment, i.e. IoU value
-    :param y0a: (np array) meta classification label of segment, i.e. intersection with ground truth or not
-    :param single_run_stats:  (dict) empty dataframe where results are stored into
-    :param run: (int) run id
-    :return: dict dataframe with stored results of meta model
-    """
+        fit meta model for one random data split and store results in dataframe
+        :param xa:  (np array) dispersion metrics as input for meta model
+        :param ya:  (np array) meta regression label of segment, i.e. IoU value
+        :param y0a: (np array) meta classification label of segment, i.e. intersection
+            with ground truth or not
+        :param single_run_stats:  (dict) empty dataframe where results are stored into
+        :param run: (int) run id
+        :return: dict dataframe with stored results of meta model
+        """
         print("Run {}".format(run))
-        xa_val, ya_val, y0a_val, xa_train, ya_train, y0a_train = self.split_data_randomly(xa, ya, y0a, seed=run)
+        (
+            xa_val,
+            ya_val,
+            y0a_val,
+            xa_train,
+            ya_train,
+            y0a_train,
+        ) = self.split_data_randomly(xa, ya, y0a, seed=run)
         coefs = np.zeros((len(self.lambdas), xa.shape[1]))
         max_acc = 0
         best_l1_results = []
 
         for i in range(len(self.lambdas)):
 
-            y0a_val_pred, y0a_train_pred, lm_coefs = classification_l1_fit_and_predict(xa_train, y0a_train,
-                                                                                       self.lambdas[i], xa_val)
+            y0a_val_pred, y0a_train_pred, lm_coefs = classification_l1_fit_and_predict(
+                xa_train, y0a_train, self.lambdas[i], xa_val
+            )
 
-            single_run_stats['penalized_val_acc'][run, i] = np.mean(np.argmax(y0a_val_pred, axis=-1) == y0a_val)
-            single_run_stats['penalized_train_acc'][run, i] = np.mean(np.argmax(y0a_train_pred, axis=-1) == y0a_train)
+            single_run_stats["penalized_val_acc"][run, i] = np.mean(
+                np.argmax(y0a_val_pred, axis=-1) == y0a_val
+            )
+            single_run_stats["penalized_train_acc"][run, i] = np.mean(
+                np.argmax(y0a_train_pred, axis=-1) == y0a_train
+            )
 
-            if single_run_stats['penalized_val_acc'][run, i] > max_acc:
-                max_acc = single_run_stats['penalized_val_acc'][run, i]
+            if single_run_stats["penalized_val_acc"][run, i] > max_acc:
+                max_acc = single_run_stats["penalized_val_acc"][run, i]
                 best_l1_results = [y0a_val_pred.copy(), y0a_train_pred.copy()]
 
-            print('Step {}, alpha={:.2E}, val. acc.: {:.2%}'.format(
-                i,
-                self.lambdas[i],
-                single_run_stats['penalized_val_acc'][run, i]))
+            print(
+                "Step {}, alpha={:.2E}, val. acc.: {:.2%}".format(
+                    i, self.lambdas[i], single_run_stats["penalized_val_acc"][run, i]
+                )
+            )
 
             fpr, tpr, _ = roc_curve(y0a_val, y0a_val_pred[:, 1])
-            single_run_stats['penalized_val_auroc'][run, i] = auc(fpr, tpr)
+            single_run_stats["penalized_val_auroc"][run, i] = auc(fpr, tpr)
             fpr, tpr, _ = roc_curve(y0a_train, y0a_train_pred[:, 1])
-            single_run_stats['penalized_train_auroc'][run, i] = auc(fpr, tpr)
+            single_run_stats["penalized_train_auroc"][run, i] = auc(fpr, tpr)
             coefs[i] = lm_coefs
 
             if np.sum(np.abs(coefs[i]) > 1e-6) > 0:
-                y0a_val_pred, y0a_train_pred = classification_fit_and_predict(xa_train[:, np.abs(coefs[i]) > 1e-6],
-                                                                              y0a_train,
-                                                                              xa_val[:, np.abs(coefs[i]) > 1e-6])
+                y0a_val_pred, y0a_train_pred = classification_fit_and_predict(
+                    xa_train[:, np.abs(coefs[i]) > 1e-6],
+                    y0a_train,
+                    xa_val[:, np.abs(coefs[i]) > 1e-6],
+                )
 
-                single_run_stats['plain_val_acc'][run, i] = np.mean(np.argmax(y0a_val_pred, axis=-1) == y0a_val)
-                single_run_stats['plain_train_acc'][run, i] = np.mean(np.argmax(y0a_train_pred, axis=-1) == y0a_train)
+                single_run_stats["plain_val_acc"][run, i] = np.mean(
+                    np.argmax(y0a_val_pred, axis=-1) == y0a_val
+                )
+                single_run_stats["plain_train_acc"][run, i] = np.mean(
+                    np.argmax(y0a_train_pred, axis=-1) == y0a_train
+                )
                 fpr, tpr, _ = roc_curve(y0a_val, y0a_val_pred[:, 1])
-                single_run_stats['plain_val_auroc'][run, i] = auc(fpr, tpr)
+                single_run_stats["plain_val_auroc"][run, i] = auc(fpr, tpr)
                 fpr, tpr, _ = roc_curve(y0a_train, y0a_train_pred[:, 1])
-                single_run_stats['plain_train_auroc'][run, i] = auc(fpr, tpr)
+                single_run_stats["plain_train_auroc"][run, i] = auc(fpr, tpr)
             else:
-                single_run_stats['plain_val_acc'][run, i] = single_run_stats['penalized_val_acc'][run, i]
-                single_run_stats['plain_train_acc'][run, i] = single_run_stats['penalized_train_acc'][run, i]
+                single_run_stats["plain_val_acc"][run, i] = single_run_stats[
+                    "penalized_val_acc"
+                ][run, i]
+                single_run_stats["plain_train_acc"][run, i] = single_run_stats[
+                    "penalized_train_acc"
+                ][run, i]
 
-                single_run_stats['plain_val_auroc'][run, i] = single_run_stats['penalized_val_auroc'][run, i]
-                single_run_stats['plain_train_auroc'][run, i] = single_run_stats['penalized_train_auroc'][run, i]
+                single_run_stats["plain_val_auroc"][run, i] = single_run_stats[
+                    "penalized_val_auroc"
+                ][run, i]
+                single_run_stats["plain_train_auroc"][run, i] = single_run_stats[
+                    "penalized_train_auroc"
+                ][run, i]
 
         ypred = np.argmax(best_l1_results[0], axis=-1)
         ypred_t = np.argmax(best_l1_results[1], axis=-1)
@@ -297,49 +445,75 @@ class AnalyzeMetrics(object):
 
         y0a_val_pred, y0a_train_pred = classification_fit_and_predict(
             xa_train[:, e_ind].reshape((xa_train.shape[0], 1)),
-            y0a_train, xa_val[:, e_ind].reshape((xa_val.shape[0], 1)))
+            y0a_train,
+            xa_val[:, e_ind].reshape((xa_val.shape[0], 1)),
+        )
 
-        single_run_stats['entropy_val_acc'][run] = np.mean(np.argmax(y0a_val_pred, axis=-1) == y0a_val)
-        single_run_stats['entropy_train_acc'][run] = np.mean(np.argmax(y0a_val_pred, axis=-1) == y0a_val)
+        single_run_stats["entropy_val_acc"][run] = np.mean(
+            np.argmax(y0a_val_pred, axis=-1) == y0a_val
+        )
+        single_run_stats["entropy_train_acc"][run] = np.mean(
+            np.argmax(y0a_val_pred, axis=-1) == y0a_val
+        )
         fpr, tpr, _ = roc_curve(y0a_val, y0a_val_pred[:, 1])
-        single_run_stats['entropy_val_auroc'][run] = auc(fpr, tpr)
+        single_run_stats["entropy_val_auroc"][run] = auc(fpr, tpr)
         fpr, tpr, _ = roc_curve(y0a_train, y0a_train_pred[:, 1])
-        single_run_stats['entropy_train_auroc'][run] = auc(fpr, tpr)
+        single_run_stats["entropy_train_auroc"][run] = auc(fpr, tpr)
 
-        single_run_stats['iou0_found'][run] = np.sum(np.logical_and(ypred == 1, y0a_val == 1)) + np.sum(
-            np.logical_and(ypred_t == 1, y0a_train == 1))
-        single_run_stats['iou0_not_found'][run] = np.sum(np.logical_and(ypred == 0, y0a_val == 1)) + np.sum(
-            np.logical_and(ypred_t == 0, y0a_train == 1))
-        single_run_stats['not_iou0_found'][run] = np.sum(np.logical_and(ypred == 0, y0a_val == 0)) + np.sum(
-            np.logical_and(ypred_t == 0, y0a_train == 0))
-        single_run_stats['not_iou0_not_found'][run] = np.sum(np.logical_and(ypred == 1, y0a_val == 0)) + np.sum(
-            np.logical_and(ypred_t == 1, y0a_train == 0))
+        single_run_stats["iou0_found"][run] = np.sum(
+            np.logical_and(ypred == 1, y0a_val == 1)
+        ) + np.sum(np.logical_and(ypred_t == 1, y0a_train == 1))
+        single_run_stats["iou0_not_found"][run] = np.sum(
+            np.logical_and(ypred == 0, y0a_val == 1)
+        ) + np.sum(np.logical_and(ypred_t == 0, y0a_train == 1))
+        single_run_stats["not_iou0_found"][run] = np.sum(
+            np.logical_and(ypred == 0, y0a_val == 0)
+        ) + np.sum(np.logical_and(ypred_t == 0, y0a_train == 0))
+        single_run_stats["not_iou0_not_found"][run] = np.sum(
+            np.logical_and(ypred == 1, y0a_val == 0)
+        ) + np.sum(np.logical_and(ypred_t == 1, y0a_train == 0))
 
         x2_train = xa_val.copy()
         y2_train = ya_val.copy()
         x2_val = xa_train.copy()
         y2_val = ya_train.copy()
 
-        y2_val_pred, y2_train_pred = regression_fit_and_predict(x2_train, y2_train, x2_val)
+        y2_val_pred, y2_train_pred = regression_fit_and_predict(
+            x2_train, y2_train, x2_val
+        )
 
-        single_run_stats['regr_val_mse'][run] = np.sqrt(mean_squared_error(y2_val, y2_val_pred))
-        single_run_stats['regr_val_r2'][run] = r2_score(y2_val, y2_val_pred)
-        single_run_stats['regr_train_mse'][run] = np.sqrt(mean_squared_error(y2_train, y2_train_pred))
-        single_run_stats['regr_train_r2'][run] = r2_score(y2_train, y2_train_pred)
+        single_run_stats["regr_val_mse"][run] = np.sqrt(
+            mean_squared_error(y2_val, y2_val_pred)
+        )
+        single_run_stats["regr_val_r2"][run] = r2_score(y2_val, y2_val_pred)
+        single_run_stats["regr_train_mse"][run] = np.sqrt(
+            mean_squared_error(y2_train, y2_train_pred)
+        )
+        single_run_stats["regr_train_r2"][run] = r2_score(y2_train, y2_train_pred)
 
-        y2e_val_pred, y2e_train_pred = regression_fit_and_predict(x2_train[:, e_ind].reshape((x2_train.shape[0], 1)),
-                                                                  y2_train,
-                                                                  x2_val[:, e_ind].reshape((x2_val.shape[0], 1)))
+        y2e_val_pred, y2e_train_pred = regression_fit_and_predict(
+            x2_train[:, e_ind].reshape((x2_train.shape[0], 1)),
+            y2_train,
+            x2_val[:, e_ind].reshape((x2_val.shape[0], 1)),
+        )
 
-        single_run_stats['entropy_regr_val_mse'][run] = np.sqrt(mean_squared_error(y2_val, y2e_val_pred))
-        single_run_stats['entropy_regr_val_r2'][run] = r2_score(y2_val, y2e_val_pred)
-        single_run_stats['entropy_regr_train_mse'][run] = np.sqrt(mean_squared_error(y2_train, y2e_train_pred))
-        single_run_stats['entropy_regr_train_r2'][run] = r2_score(y2_train, y2e_train_pred)
+        single_run_stats["entropy_regr_val_mse"][run] = np.sqrt(
+            mean_squared_error(y2_val, y2e_val_pred)
+        )
+        single_run_stats["entropy_regr_val_r2"][run] = r2_score(y2_val, y2e_val_pred)
+        single_run_stats["entropy_regr_train_mse"][run] = np.sqrt(
+            mean_squared_error(y2_train, y2e_train_pred)
+        )
+        single_run_stats["entropy_regr_train_r2"][run] = r2_score(
+            y2_train, y2e_train_pred
+        )
 
-        single_run_stats['coefs'][run] = np.asarray(coefs)
+        single_run_stats["coefs"][run] = np.asarray(coefs)
 
         if run == 0:
-            plot_roc_curve(y0a_val, best_l1_results[0][:, 1], CONFIG.RESULTS_DIR + 'roccurve.pdf')
+            plot_roc_curve(
+                y0a_val, best_l1_results[0][:, 1], CONFIG.RESULTS_DIR + "roccurve.pdf"
+            )
             plot_regression(x2_val, y2_val, y2_val_pred, self.X_names)
             plot_classif_hist(ya_val, ypred)
 
@@ -348,13 +522,13 @@ class AnalyzeMetrics(object):
     @staticmethod
     def split_data_randomly(xa, ya, y0a, seed):
         """
-    create random data split 50/50 for training and validation
-    :param xa:  (np array) dispersion metrics
-    :param ya:  (np array) meta regression label
-    :param y0a: (np array) meta classification label
-    :param seed: (int) number used to initialize random generator
-    :return: splitted np arrays for training and validation
-    """
+        create random data split 50/50 for training and validation
+        :param xa:  (np array) dispersion metrics
+        :param ya:  (np array) meta regression label
+        :param y0a: (np array) meta classification label
+        :param seed: (int) number used to initialize random generator
+        :return: splitted np arrays for training and validation
+        """
         np.random.seed(seed)
         val_mask = np.random.rand(len(ya)) < 3.0 / 6.0
 
@@ -370,19 +544,15 @@ class AnalyzeMetrics(object):
 
     def merge_stats(self, stats, single_run_stats):
         """
-    combine results for every one single dataframe
-    :param stats: (dict) the single dataframe
-    :param single_run_stats: (dict) dataframe from one run, note: strange format due to parallelization
-    :return: dict dataframe with stored results
-    """
+        combine results for every one single dataframe
+        :param stats: (dict) the single dataframe
+        :param single_run_stats: (dict) dataframe from one run, note: strange format
+            due to parallelization
+        :return: dict dataframe with stored results
+        """
         for run in range(self.n_av):
             for s in stats:
                 if s not in ["alphas", "n_av", "n_metrics", "metric_names"]:
                     stats[s][run] = single_run_stats[run][s][run]
 
         return stats
-
-
-"""
-TODOS: the functions "fit_model_run" and "init_stats" must be improved in terms of readability
-"""
