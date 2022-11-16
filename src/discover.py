@@ -700,6 +700,7 @@ class Discovery(object):
     def store_thumbnail(self, ind):
         """Stores a thumbnail of a segment if requested. Thus is not saving the whole
         image but only the cropped part."""
+        self.log.info("Saving thumbnail...")
         image = Image.open(self.data["image_path"][self.gi[ind]]).convert("RGB")
         image = image.crop(self.data["box"][ind])
 
