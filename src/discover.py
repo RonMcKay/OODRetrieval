@@ -905,8 +905,9 @@ class Discovery(object):
     def get_ind_nn(self, event):
         """Helper function for the nearest neighbor plot."""
         _, ncols = self.get_gridsize(self.fig_nn)
-        eventrow = event.inaxes.rowNum
-        eventcol = event.inaxes.colNum
+        spec = event.inaxes.get_subplotspec()
+        eventrow = spec.rowspan.start
+        eventcol = spec.colspan.start
         return (eventrow * ncols) + eventcol
 
     def color_gt(self):
