@@ -1,0 +1,30 @@
+fail_fast: true
+repos:
+  - repo: https://github.com/RonMcKay/cz_conventional_commits_ronmckay.git
+    rev: v0.3.3
+    hooks:
+      - id: commitizen
+
+  - repo: local
+    hooks:
+      - id: system
+        name: Code Style Check (black)
+        entry: make test-black
+        language: system
+        pass_filenames: false
+        stages:
+          - commit
+      - id: system
+        name: Code Style Check (flake8)
+        entry: make test-flake8
+        language: system
+        pass_filenames: false
+        stages:
+          - commit
+      - id: system
+        name: Code Style Check (isort)
+        entry: make test-isort
+        language: system
+        pass_filenames: false
+        stages:
+          - commit
