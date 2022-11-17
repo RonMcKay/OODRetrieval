@@ -6,6 +6,14 @@
 
 </div>
 
+<div align="center">
+
+# Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation
+**Philipp Oberdiek** (TU Dortmund University), **Matthias Rottmann** (EPFL, University of Wuppertal),  
+**Gernot A. Fink** (TU Dortmund University),  
+
+</div>
+
 This repository supplies the code to the paper **'Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation'**. Please have a look at the [paper](https://arxiv.org/abs/2005.06831) or our [presentation](https://youtu.be/T6rrAE47CFw).
 
 DeepLabV3+ model and pretrained cityscapes weights are from [NVIDIA's Semantic Segmentation](
