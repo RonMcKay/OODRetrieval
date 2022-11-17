@@ -132,11 +132,14 @@ c | Starts a clustering with k-means as standard algorithm. You will be asked fo
 \# | Cycles through all available clustering algorithms. Currently there is k-means, spectral- and agglomerative-clustering (with ward linkage) supported.
 
 #### Citing
-@inproceedings{Oberdiek2020,\
-author = {Philipp Oberdiek and Matthias Rottmann and Gernot A. Fink},\
-title = {Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation},\
-booktitle = {2020 {IEEE/CVF} Conference on Computer Vision and Pattern Recognition, {CVPR} Workshops 2020, Seattle, WA, USA, June 14-19, 2020},\
-pages = {1331--1340},\
-publisher = {{IEEE}},\
-year = {2020},\
+
+```txt
+@inproceedings{Oberdiek2020,
+    author = {Philipp Oberdiek and Matthias Rottmann and Gernot A. Fink},
+    title = {Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation},
+    booktitle = {2020 {IEEE/CVF} Conference on Computer Vision and Pattern Recognition, {CVPR} Workshops 2020, Seattle, WA, USA, June 14-19, 2020},
+    pages = {1331--1340},
+    publisher = {{IEEE}},
+    year = {2020},
 }
+```
