@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![GitHub](https://img.shields.io/github/license/ronmckay/oodretrieval)](https://github.com/RonMcKay/OODRetrieval/blob/master/LICENSE) ![GitHub repo size](https://img.shields.io/github/repo-size/ronmckay/oodretrieval?logo=github) ![GitHub Repo stars](https://img.shields.io/github/stars/ronmckay/oodretrieval?logo=github) [![](https://img.shields.io/badge/mail-contact-informational?link=mailto:git@oberdiek.net&link=mailto:git@oberdiek.net)](mailto:git@oberdiek.net) [![](https://img.shields.io/youtube/views/T6rrAE47CFw?label=Presentation&style=social)](https://youtu.be/T6rrAE47CFw)
+[![GitHub](https://img.shields.io/github/license/ronmckay/oodretrieval)](https://github.com/RonMcKay/OODRetrieval/blob/master/LICENSE) ![GitHub repo size](https://img.shields.io/github/repo-size/ronmckay/oodretrieval?logo=github) ![GitHub Repo stars](https://img.shields.io/github/stars/ronmckay/oodretrieval?logo=github) [![](https://img.shields.io/badge/mail-contact-informational?link=mailto:git@oberdiek.net&link=mailto:git@oberdiek.net)](mailto:git@oberdiek.net) [![](https://img.shields.io/youtube/views/T6rrAE47CFw?label=Presentation&style=social)][presentation]
 
 </div>
 
@@ -14,23 +14,27 @@
 
 </div>
 
-This repository supplies the code to the paper **'Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation'**. Please have a look at the [paper](https://arxiv.org/abs/2005.06831) or our [presentation](https://youtu.be/T6rrAE47CFw).
+This repository supplies the code to the paper **'Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation'**. Please have a look at the [paper](https://arxiv.org/abs/2005.06831) or our [presentation].
 
 DeepLabV3+ model and pretrained cityscapes weights are from [NVIDIA's Semantic Segmentation](
 https://github.com/NVIDIA/semantic-segmentation) repository.\
-NOTE: Due to a change in NVIDIA's Semantic Segmentation Repository the DeepLabv3+ model weights which were used in this publication can no longer be downloaded. We therefor hosted them and they can be downloaded [here](https://tu-dortmund.sciebo.de/s/g9ywugdg7J5GHSf).
+NOTE: Due to a change in NVIDIA's Semantic Segmentation Repository the DeepLabv3+ model weights which were used in this publication can no longer be downloaded. We therefor hosted them and they can be downloaded [here][deeplab-weights].
 
 The original MetaSeg Code can be found in the repository to the paper
 [Prediction Error Meta Classification in Semantic Segmentation:
 Detection via Aggregated Dispersion Measures of Softmax Probabilites](https://github.com/mrottmann/MetaSeg).
 
-#### DeepLabv3+ Model and Datasets
+# Table of Contents
 
-- As mentioned above the pretrained model weights for the DeepLabv3+ architecture were previously acquired from [NVIDIA's Semantic Segmentation](https://github.com/NVIDIA/semantic-segmentation) repository but are no longer available there. You can download the model weights used in this publication [here](https://tu-dortmund.sciebo.de/s/g9ywugdg7J5GHSf).
-- [A2D2 Dataset](https://www.audi-electronics-venture.de/aev/web/de/driving-dataset.html)
-- [Cityscapes Dataset](https://www.cityscapes-dataset.com/)
+- [Installation / Configuration](#installation--configuration)
+- [DeepLabv3+ Model and Datasets](#deeplabv3-model-and-datasets)
+- [Scripts to run](#scripts-to-run)
+- [How to add your own dataset](#how-to-add-your-own-dataset)
+- [How to add your own model](#how-to-add-your-own-model)
+- [Keyboard and mouse commands](#keyboard-and-mouse-commands)
+- [Citing](#citing)
 
-#### Preliminaries
+# Installation / Configuration
 
 - Make sure your cloned copy is on your `PYTHONPATH`.
 - Packages that we used can be found in `pyproject.toml`. Installation can be easily done with [poetry](https://python-poetry.org/) (`poetry install`)
@@ -42,7 +46,13 @@ as an experiment and command line argument manager. Check out the help message w
 configuration is displayed. They reference back to the `configuration.py` but can also be changed
 on the command line using e.g. `python3 script_name.py with args.gpu=3`.
 
-#### Scripts to run
+# DeepLabv3+ Model and Datasets
+
+- As mentioned above the pretrained model weights for the DeepLabv3+ architecture were previously acquired from [NVIDIA's Semantic Segmentation](https://github.com/NVIDIA/semantic-segmentation) repository but are no longer available there. You can download the model weights used in this publication [here][deeplab-weights].
+- [A2D2 Dataset](https://www.audi-electronics-venture.de/aev/web/de/driving-dataset.html)
+- [Cityscapes Dataset](https://www.cityscapes-dataset.com/)
+
+# Scripts to run
 
 In order to ensure that all the meta data is present you have to run the following scripts
 in the depicted order. For later runs you may omit some of them as most of the results are
@@ -66,7 +76,7 @@ commands that you can use.\
 Note: As images are loaded on the fly it is best to have all the data on a local machine and also run `discover_embedding_space.py`
 on your local machine. SSH tunnels should work too but might be slow because of the transmission of the image data.
 
-#### How to add your own dataset
+# How to add your own dataset
 
 If you just want to infer some images without having ground truth and without writing a
 PyTorch dataset class you can use the provided custom dataset class and just change the path
@@ -99,7 +109,7 @@ your images and run the scripts.
 `pred_class_selection` within the same file of your dataset class and list all the predicted class indices that should
 be considered for further processing (see `cityscapes.py` for an example).
 
-#### How to add your own model
+# How to add your own model
 
 In order to add a custom semantic segmentation or meta model you just have to add a new entry in the respective dictionary
 within the `configuration.py` file. The first argument should be the name of your model (will be used to generate folder structure).
@@ -109,7 +119,7 @@ or if they do not exist yet where the trained weights should be saved (in case y
 it with the `train_meta_nn.py` script). Meta models should accept an integer as first attribute which sets the number
 of input features to the network.
 
-#### Keyboard and mouse commands
+# Keyboard and mouse commands
 
 When using the `discover_embedding_space.py` script you can discover the embedding space of
 predicted segments in an interactive matplotlib environment. The following commands only work
@@ -131,7 +141,7 @@ d | Shows a global gaussian kernel density estimate in the background.
 c | Starts a clustering with k-means as standard algorithm. You will be asked for the number of clusters you want to compute. Typing 'elbow' will give you the opportunity to estimate the optimal number of clusters. This only works with the k-means algorithm.
 \# | Cycles through all available clustering algorithms. Currently there is k-means, spectral- and agglomerative-clustering (with ward linkage) supported.
 
-#### Citing
+# Citing
 
 ```txt
 @inproceedings{Oberdiek2020,
@@ -143,3 +153,6 @@ c | Starts a clustering with k-means as standard algorithm. You will be asked fo
     year = {2020},
 }
 ```
+
+[deeplab-weights]: https://tu-dortmund.sciebo.de/s/g9ywugdg7J5GHSf "DeepLabv3+ Model Weights"
+[presentation]: https://youtu.be/T6rrAE47CFw "Youtube Video Presentation" 
