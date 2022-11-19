@@ -9,7 +9,7 @@
 <div align="center">
 
 # Detection and Retrieval of Out-of-Distribution Objects in Semantic Segmentation
-**Philipp Oberdiek** (TU Dortmund University), **Matthias Rottmann** (EPFL, University of Wuppertal),  
+**Philipp Oberdiek** (TU Dortmund University), **Matthias Rottmann** (University of Wuppertal),  
 **Gernot A. Fink** (TU Dortmund University),  
 
 </div>
