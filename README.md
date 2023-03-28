@@ -154,5 +154,5 @@ c | Starts a clustering with k-means as standard algorithm. You will be asked fo
 }
 ```
 
-[deeplab-weights]: https://tu-dortmund.sciebo.de/s/g9ywugdg7J5GHSf "DeepLabv3+ Model Weights"
-[presentation]: https://youtu.be/T6rrAE47CFw "Youtube Video Presentation" 
+[deeplab-weights]: https://drive.google.com/file/d/1yqj4qekB_ZLenwNjPi-bh0o1RK-1OLRu/view?usp=share_link "DeepLabv3+ Model Weights"
+[presentation]: https://youtu.be/T6rrAE47CFw "Youtube Video Presentation"
